@@ -84,16 +84,19 @@ class InputBeamPhaseDisplay(QWidget):
 class Worker(QThread):
     finished_generate_input_beam = pyqtSignal(Field)
 
-    def __init__(self, input_beam_config,simulation_config,beam_shaper):
+    def __init__(self, input_beam_editor,simulation_editor,beam_shaper):
         super().__init__()
-        self.input_beam_config = input_beam_config
-        self.simulation_config = simulation_config
+        self.input_beam_config = input_beam_editor.config
+        self.simulation_editor = simulation_editor
+        self.simulation_config = simulation_editor.config
         self.beam_shaper = beam_shaper
 
     def run(self):
         # Put your analysis here
-        self.beam_shaper.generate_sampling(self.simulation_config, self.input_beam_config)
-        input_field = self.beam_shaper.generate_input_beam(self.simulation_config,self.input_beam_config)
+
+        self.beam_shaper.generate_sampling()
+        self.simulation_editor.update_nb_of_samples(self.beam_shaper.nb_of_samples)
+        input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
         self.finished_generate_input_beam.emit(input_field)
 
 class InputBeamWidget(QWidget):
@@ -182,7 +185,7 @@ class InputBeamWidget(QWidget):
         self.input_beam_editor.get_config()
         self.simulation_editor.get_config()
 
-        self.worker = Worker(self.input_beam_editor.config,self.simulation_editor.config, self.beam_shaper)
+        self.worker = Worker(self.input_beam_editor,self.simulation_editor, self.beam_shaper)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_intensity)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_phase)
         self.worker.start()

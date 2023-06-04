@@ -7,7 +7,7 @@ from gui_elements import InputBeamEditorWidget
 from gui_elements import SimulationConfigEditorWidget
 from gui_elements import SLMMaskWidget
 from gui_elements import InfosEditorWidget
-from gui_elements import DetectionWidget
+from gui_elements import FourierPlaneDetectionWidget
 from BeamShaper import BeamShaper
 
 class MainWindow(QMainWindow):
@@ -17,12 +17,15 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon('logo_beam_shaper.png'))  # Uncomment this line
         self.setWindowTitle('Beam Shaping Simulator')
 
-        self.BeamShaper = BeamShaper(initial_config_file="config/optical_system.yml")
+
 
         self.infos_editor = InfosEditorWidget(initial_infos_config_path="config/infos.yml")
         self.input_beam_editor = InputBeamEditorWidget(initial_input_beam_config_path="config/input_beam.yml")
         self.simulation_editor = SimulationConfigEditorWidget(simulation_config_path="config/simulation.yml")
 
+        self.BeamShaper = BeamShaper(self.simulation_editor,
+                                    self.input_beam_editor,
+                                     initial_config_file="config/optical_system.yml")
 
         self.input_beam_widget = InputBeamWidget(self.BeamShaper,
                                                  self.infos_editor,
@@ -39,13 +42,15 @@ class MainWindow(QMainWindow):
         self.SLM_mask_dock.setWidget(self.SLM_mask_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.SLM_mask_dock)
         #
-        # self.detection_widget = DetectionWidget(self.system_editor,detection_config_path="config/detection.yml")
-        # self.detection_dock = QDockWidget("Detection")
-        # self.detection_dock.setWidget(self.detection_widget)
-        # self.addDockWidget(Qt.RightDockWidgetArea, self.detection_dock)
+        self.fourier_plane_detection_widget = FourierPlaneDetectionWidget(self.BeamShaper,
+                                                                         self.SLM_mask_widget,
+                                                                         )
+        self.fourier_plane_detection_dock = QDockWidget("Detection")
+        self.fourier_plane_detection_dock.setWidget(self.fourier_plane_detection_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.fourier_plane_detection_dock)
 
         self.tabifyDockWidget(self.input_beam_dock, self.SLM_mask_dock)
-        # self.tabifyDockWidget(self.SLM_mask_dock, self.detection_dock)
+        self.tabifyDockWidget(self.SLM_mask_dock, self.fourier_plane_detection_dock)
         #
         # self.input_beam_dock.raise_()
         # # Connect the signal to the slot

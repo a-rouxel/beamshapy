@@ -9,6 +9,7 @@ import numpy as np
 from LightPipes import Field, Phase, Intensity
 
 class SimulationConfigEditorWidget(QWidget):
+    sampling_generated = pyqtSignal(int)
     def __init__(self, simulation_config_path=None):
         super().__init__()
 
@@ -22,14 +23,20 @@ class SimulationConfigEditorWidget(QWidget):
 
         # Create QLineEdit widgets for each of the config parameters you want to edit
         self.grid_size = QLineEdit()
-        self.sampling = QLineEdit()
+        self.grid_sampling = QLineEdit()
+        self.nb_of_samples = QLineEdit()
+        self.nb_of_samples.setReadOnly(True)  # The dimensions should be read-only
         # Add more fields as needed...
 
         # Create a form layout and add your QLineEdit widgets
         general_layout = QFormLayout()
         general_layout.addRow("Grid Size [in mm]", self.grid_size)
-        general_layout.addRow("Sampling", self.sampling)
+        general_layout.addRow("Grid Sampling [in um]", self.grid_sampling)
+        general_layout.addRow("Nb of Samples along X and Y", self.nb_of_samples)
         # Add more rows as needed...
+
+        self.sampling_generated.connect(self.update_nb_of_samples)
+
 
         general_group = QGroupBox("Simulation Settings")
         general_group.setLayout(general_layout)
@@ -86,7 +93,7 @@ class SimulationConfigEditorWidget(QWidget):
     def get_config(self):
 
         config = {
-                "sampling": int(self.sampling.text()),
+                "grid sampling": float(self.grid_sampling.text()),
                 "grid size": float(self.grid_size.text()),
         }
 
@@ -96,5 +103,11 @@ class SimulationConfigEditorWidget(QWidget):
     def update_config(self):
         # This method should update your QLineEdit and QSpinBox widgets with the loaded config.
 
-        self.sampling.setText(str(self.config['sampling']))
+        self.grid_sampling.setText(str(self.config['grid sampling']))
         self.grid_size.setText(str(self.config['grid size']))
+
+    @pyqtSlot(int)
+    def update_nb_of_samples(self, nb_of_samples):
+        # Update the GUI in this slot function, which is called from the main thread
+        self.nb_of_samples.setText(str(nb_of_samples))
+
