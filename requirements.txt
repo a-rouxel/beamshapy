@@ -1,0 +1,6 @@
+h5py
+lightpipes
+pip-chill
+pyqt5
+pyqtgraph
+pyyaml
