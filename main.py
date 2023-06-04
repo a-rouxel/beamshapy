@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowIcon(QIcon('logo_beam_shaper.png'))  # Uncomment this line
-        self.setWindowTitle('Beam Shaping Simulator')
+        self.setWindowTitle('Beam Shaping FFT')
 
 
 
@@ -51,6 +51,8 @@ class MainWindow(QMainWindow):
 
         self.tabifyDockWidget(self.input_beam_dock, self.SLM_mask_dock)
         self.tabifyDockWidget(self.SLM_mask_dock, self.fourier_plane_detection_dock)
+
+        self.input_beam_dock.raise_()
         #
         # self.input_beam_dock.raise_()
         # # Connect the signal to the slot

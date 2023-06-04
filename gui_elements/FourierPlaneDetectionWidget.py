@@ -244,7 +244,7 @@ class FourierPlaneDetectionWidget(QWidget):
         self.result_display_widget.addTab(self.propagated_image_plane_display, "Image Plane")
 
         self.propagate_button = QPushButton('Propagate')  # Create a button
-        self.propagate_button.setStyleSheet('QPushButton {background-color: green; color: white;}')        # Connect the button to the run_dimensioning method
+        self.propagate_button.setStyleSheet('QPushButton {background-color: gray; color: white;}')        # Connect the button to the run_dimensioning method
         self.propagate_button.clicked.connect(self.run_propagate)
 
         # Create a group box for the run button
