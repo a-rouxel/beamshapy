@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # self.setWindowIcon(QIcon('Figure_1.ico'))
+        self.setWindowIcon(QIcon('logo_beam_shaper.png'))  # Uncomment this line
         self.setWindowTitle('Beam Shaping Simulator')
 
         self.BeamShaper = BeamShaper(initial_config_file="config/optical_system.yml")
@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon('logo_beam_shaper.png')) # Add this line
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())

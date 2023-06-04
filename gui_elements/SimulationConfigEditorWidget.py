@@ -28,7 +28,7 @@ class SimulationConfigEditorWidget(QWidget):
         # Create a form layout and add your QLineEdit widgets
         general_layout = QFormLayout()
         general_layout.addRow("Grid Size [in mm]", self.grid_size)
-        general_layout.addRow("Number of Samples", self.sampling)
+        general_layout.addRow("Sampling", self.sampling)
         # Add more rows as needed...
 
         general_group = QGroupBox("Simulation Settings")
