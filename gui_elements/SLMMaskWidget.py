@@ -31,6 +31,8 @@ class MaskParamsWidget(QWidget):
 
         self.generate_mask_button = QPushButton("Generate Mask")
         self.generate_mask_button.clicked.connect(self.generate_phase_mask)
+
+
         self.inner_layout.addRow(self.generate_mask_button)
 
         self.normalize_layout = QVBoxLayout()
@@ -84,7 +86,9 @@ class MaskParamsWidget(QWidget):
             self.min_group.hide()
             self.max_group.hide()
 
-
+    def enable_generate_mask_button(self):
+        # Enable the "Generate Mask" button
+        self.generate_mask_button.setEnabled(True)
     @staticmethod
     def normalize(mask, min_value, max_value):
         # Normalize the mask to the range [min_value, max_value]
@@ -128,6 +132,7 @@ class MaskParamsWidget(QWidget):
             mask = self.normalize(mask, min_value, max_value)
 
         self.generated_mask = mask
+        self.generate_mask_button.setDisabled(True)
         self.maskGenerated.emit(mask, self.beam_shaper.x_array_in)
 
     def update_mask_params(self):
@@ -136,7 +141,7 @@ class MaskParamsWidget(QWidget):
             # Remove row at index i from the layout
             self.inner_layout.removeRow(i)
 
-
+        self.mask_type_selector.currentIndexChanged.connect(self.enable_generate_mask_button)
 
         # Circular Mask parameters: radius, intensity
         if self.mask_type_selector.currentText() == "Grating":
@@ -147,6 +152,11 @@ class MaskParamsWidget(QWidget):
             self.inner_layout.addRow("pixels number per groove [no units]", self.period)
             self.inner_layout.addRow("Orientation", self.orientation)
 
+            # Connect the textChanged signal for these parameters
+            self.period.textChanged.connect(self.enable_generate_mask_button)
+            self.orientation.currentIndexChanged.connect(self.enable_generate_mask_button)
+
+
         if self.mask_type_selector.currentText() == "Wedge":
             self.angle = QLineEdit()
             self.angle.setText(str(0.5))
@@ -154,6 +164,11 @@ class MaskParamsWidget(QWidget):
             self.orientation.addItems(["Horizontal", "Vertical"])
             self.inner_layout.addRow("angle [in degree]", self.angle)
             self.inner_layout.addRow("Orientation", self.orientation)
+
+            # Connect the textChanged signal for these parameters
+            self.angle.textChanged.connect(self.enable_generate_mask_button)
+            self.orientation.currentIndexChanged.connect(self.enable_generate_mask_button)
+
 
         if self.mask_type_selector.currentText() == "Phase Reversal":
             self.sigma_x = QLineEdit()
@@ -163,10 +178,17 @@ class MaskParamsWidget(QWidget):
             self.inner_layout.addRow("sigma_x [no units]", self.sigma_x)
             self.inner_layout.addRow("sigma_y [no units]", self.sigma_y)
 
+            # Connect the textChanged signal for these parameters
+            self.sigma_x.textChanged.connect(self.enable_generate_mask_button)
+            self.sigma_y.textChanged.connect(self.enable_generate_mask_button)
+
+
         if self.mask_type_selector.currentText() == "Weights Sinc":
             self.threshold = QLineEdit()
             self.threshold.setText(str(0.01))
             self.inner_layout.addRow("threshold [no units]", self.threshold)
+
+            self.threshold.textChanged.connect(self.enable_generate_mask_button)
 
         # Custom H5 Mask parameters: file path
         elif self.mask_type_selector.currentText() == "Custom H5 Mask":
@@ -177,6 +199,8 @@ class MaskParamsWidget(QWidget):
 
             self.inner_layout.addRow("File Path", self.file_path)
             self.inner_layout.addRow("", self.browse_button)
+
+            self.file_path.textChanged.connect(self.enable_generate_mask_button)
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select h5 file", "", "H5 Files (*.h5)")
         if file_path:
