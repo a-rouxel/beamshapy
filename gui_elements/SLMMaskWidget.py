@@ -10,6 +10,7 @@ from LightPipes import mm,um
 import os
 from datetime import datetime
 import h5py
+from utils import save_result_mask, normalize, discretize_array
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
@@ -97,14 +98,6 @@ class MaskParamsWidget(QWidget):
     def enable_generate_mask_button(self):
         # Enable the "Generate Mask" button
         self.generate_mask_button.setEnabled(True)
-    @staticmethod
-    def normalize(mask, min_value, max_value):
-        # Normalize the mask to the range [min_value, max_value]
-        mask_min = mask.min()
-        mask_max = mask.max()
-        return min_value + (max_value - min_value) * (mask - mask_min) / (mask_max - mask_min)
-
-
 
     def generate_phase_mask(self):
         # Get the mask type
@@ -140,7 +133,7 @@ class MaskParamsWidget(QWidget):
         if self.normalize_checkbox.isChecked():
             min_value = float(self.min_value_input.text())
             max_value = float(self.max_value_input.text())
-            mask = self.normalize(mask, min_value, max_value)
+            mask = normalize(mask, min_value, max_value)
 
 
 
@@ -395,46 +388,18 @@ class SLMMaskWidget(QWidget):
             }
         """)
 
-    @staticmethod
-    def discretize_array(array, levels=256):
-        # Find the min and max values in the array
-        min_val = np.min(array)
-        max_val = np.max(array)
 
-        # Normalize array to [0, 1]
-        normalized_array = (array - min_val) / (max_val - min_val)
-
-        # Discretize to specified levels
-        discretized_array = np.round(normalized_array * (levels - 1)).astype(int)
-
-        # Map back to original range
-        discretized_array = (discretized_array / (levels - 1)) * (max_val - min_val) + min_val
-
-        return discretized_array
 
     def on_resulting_mask_save(self):
         # self.result_directory = initialize_directory(self.infos_editor.config)
         self.simulation_name = self.infos_editor.config['simulation name']
         self.results_directory = self.infos_editor.config['results directory']
         results_directory = os.path.join(self.results_directory, self.simulation_name)
-        os.makedirs(results_directory, exist_ok=True)
 
-        if self.result_mask is not None:
-            result_mask = self.result_mask
 
-            # Save the arrays in an H5 file
-            file_path = os.path.join(results_directory, 'result_mask.h5')
-            counter = 0
-            while os.path.exists(file_path):
-                counter += 1
-                file_path = os.path.join(results_directory, f'result_mask_{counter}.h5')
+        # Save the resulting mask
+        save_result_mask(self.result_mask, results_directory)
 
-            with h5py.File(file_path, 'w') as f:
-                f.create_dataset('mask', data=result_mask)
-
-            print("Mask data saved !")
-        else:
-            print("No Mask data to save")
 
         self.save_mask_button.setDisabled(True)
 
@@ -450,7 +415,7 @@ class SLMMaskWidget(QWidget):
 
         # Custom operations dictionary
         operations = {
-            "warp": lambda x: (x % 2 * np.pi - np.pi)  # define your warp function here
+            "warp": lambda x: np.angle(np.exp(1j*x))  # define your warp function here
         }
 
         # Split the operation into parts
@@ -498,7 +463,7 @@ class SLMMaskWidget(QWidget):
             self.result_mask = self.masks_dict["M1"]
 
         if self.discretize_checkbox.isChecked():
-            self.result_mask = self.discretize_array(self.result_mask)
+            self.result_mask = discretize_array(self.result_mask)
 
         # Create a new widget for the display
         result_display = DisplayWidget(self.beam_shaper)  # replace with your actual Display Widget here

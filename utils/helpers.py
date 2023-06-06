@@ -84,11 +84,23 @@ def undersample_grid(grid, target_size=40):
         return grid[::1,::1]
     return grid[::factor,::factor]
 
+
 mm = 10** -3
+
+
+def normalize(mask, min_value, max_value):
+    # Normalize the mask to the range [min_value, max_value]
+    mask_min = mask.min()
+    mask_max = mask.max()
+    return min_value + (max_value - min_value) * (mask - mask_min) / (mask_max - mask_min)
+
+
 def save_generated_fields(beam_shaper, modulated_input_field, fourier_plane_field, fourier_filtered_field, output_field,
                           results_directory):
-    # Save the modulated input field
 
+
+    # Save the modulated input field
+    os.makedirs(results_directory, exist_ok=True)
     if modulated_input_field is not None:
         modulated_input_field = modulated_input_field
 
@@ -176,3 +188,48 @@ def save_generated_fields(beam_shaper, modulated_input_field, fourier_plane_fiel
         print("Output Field data saved !")
     else:
         print("No Output Field data to save")
+
+def save_input_beam(results_directory, beam_shaper, last_generated_beam_field):
+
+    os.makedirs(results_directory, exist_ok=True)
+
+    if last_generated_beam_field is not None:
+        last_generated_beam_field = last_generated_beam_field
+
+        # Calculate the other two arrays
+        intensity = np.abs(last_generated_beam_field.field) ** 2
+        phase = np.angle(last_generated_beam_field.field)
+
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'input_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'input_field_{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Input Field data saved !")
+    else:
+        print("No field data to save")
+def save_result_mask(result_mask, results_directory):
+    os.makedirs(results_directory, exist_ok=True)
+    # Save the arrays in an H5 file
+    file_path = os.path.join(results_directory, 'result_mask.h5')
+    counter = 0
+    while os.path.exists(file_path):
+        counter += 1
+        file_path = os.path.join(results_directory, f'result_mask_{counter}.h5')
+
+    with h5py.File(file_path, 'w') as f:
+        f.create_dataset('mask', data=result_mask)
+
+    print("Mask data saved !")
+
+def find_nearest_index(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx

@@ -145,18 +145,30 @@ def Simple1DBlazedGratingMask(x_array, period):
 
     return mask
 
+def discretize_array(array, levels=256):
+    # Find the min and max values in the array
+    min_val = np.min(array)
+    max_val = np.max(array)
+
+    # Normalize array to [0, 1]
+    normalized_array = (array - min_val) / (max_val - min_val)
+
+    # Discretize to specified levels
+    discretized_array = np.round(normalized_array * (levels - 1)).astype(int)
+
+    # Map back to original range
+    discretized_array = (discretized_array / (levels - 1)) * (max_val - min_val) + min_val
+
+    return discretized_array
 
 
-def Simple1DWedgeMask(x_array,wavelength,angle):
+def Simple2DWedgeMask(x_array,wavelength,angle):
 
-    slope = np.tan(angle)
+    max_phase = 2*np.pi*np.radians(angle) / np.arctan(wavelength/(x_array.max() - x_array.min()))
+    wedge_1D = np.linspace(0, max_phase, x_array.shape[0])
+    wedge_2D = np.tile(wedge_1D, ( x_array.shape[0],1))
 
-    m = slope* (x_array.max() - x_array.min()) / wavelength
-    # generate a slope with the given angle
-
-    mask = slope * x_array * m
-
-    return mask
+    return wedge_2D
 
 def sinc_resized(x,step):
     return np.sinc(x/step)

@@ -162,30 +162,8 @@ class InputBeamWidget(QWidget):
         self.simulation_name = self.infos_editor.config['simulation name']
         self.results_directory = self.infos_editor.config['results directory']
         results_directory = os.path.join(self.results_directory, self.simulation_name)
-        os.makedirs(results_directory, exist_ok=True)
 
-        if self.last_generated_beam_field is not None:
-            last_generated_beam_field = self.last_generated_beam_field
-
-            # Calculate the other two arrays
-            intensity = np.abs(last_generated_beam_field.field) ** 2
-            phase = np.angle(last_generated_beam_field.field)
-
-            # Save the arrays in an H5 file
-            file_path = os.path.join(results_directory, 'input_field.h5')
-            counter = 0
-            while os.path.exists(f'{file_path}'):
-                counter += 1
-                file_path = os.path.join(results_directory, f'input_field_{counter}.h5')
-
-            with h5py.File(file_path, 'w') as f:
-                f.create_dataset('intensity', data=intensity)
-                f.create_dataset('phase', data=phase)
-                f.create_dataset('x_vector_mm', data=self.beam_shaper.x_array_out / mm)
-
-            print("Field data saved !")
-        else:
-            print("No field data to save")
+        save_input_beam(results_directory, self.beam_shaper, self.last_generated_beam_field)
 
         self.save_input_beam_button.setDisabled(True)
 

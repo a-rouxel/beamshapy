@@ -23,8 +23,8 @@ class MainWindow(QMainWindow):
         self.input_beam_editor = InputBeamEditorWidget(initial_input_beam_config_path="config/input_beam.yml")
         self.simulation_editor = SimulationConfigEditorWidget(simulation_config_path="config/simulation.yml")
 
-        self.BeamShaper = BeamShaper(self.simulation_editor,
-                                    self.input_beam_editor,
+        self.BeamShaper = BeamShaper(self.simulation_editor.get_config(),
+                                    self.input_beam_editor.get_config(),
                                      initial_config_file="config/optical_system.yml")
 
         self.input_beam_widget = InputBeamWidget(self.BeamShaper,

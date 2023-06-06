@@ -281,7 +281,7 @@ class FourierPlaneDetectionWidget(QWidget):
         self.simulation_name = self.infos_editor.config['simulation name']
         self.results_directory = self.infos_editor.config['results directory']
         results_directory = os.path.join(self.results_directory, self.simulation_name)
-        os.makedirs(results_directory, exist_ok=True)
+
 
         save_generated_fields(self.beam_shaper, self.modulated_input_field, self.fourier_plane_field, self.fourier_filtered_field, self.output_field,
                               results_directory)

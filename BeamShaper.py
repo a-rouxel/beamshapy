@@ -4,9 +4,9 @@ from LightPipes import *
 from utils import *
 class BeamShaper():
 
-    def __init__(self,simulation_editor,input_beam_editor,initial_config_file):
-        self.simulation_editor = simulation_editor
-        self.input_beam_editor = input_beam_editor
+    def __init__(self,simulation_config,input_beam_config,initial_config_file):
+        self.simulation_config = simulation_config
+        self.input_beam_config = input_beam_config
         self.initial_config_file = initial_config_file
 
         # Load the initial configuration file if one was provided
@@ -43,8 +43,8 @@ class BeamShaper():
         return F
 
     def generate_sampling(self):
-        simulation_config = self.simulation_editor.get_config()
-        input_beam_config = self.input_beam_editor.get_config()
+        simulation_config = self.simulation_config
+        input_beam_config = self.input_beam_config
 
         self.input_grid_size = simulation_config["grid size"]*mm
         self.input_grid_sampling = simulation_config["grid sampling"] *um
@@ -74,6 +74,7 @@ class BeamShaper():
 
     def generate_mask(self,mask_type, angle=None,period=None,orientation=None,sigma_x=None,sigma_y=None,threshold=None):
 
+
         if self.x_array_in is None:
             raise ValueError("Please generate Input Beam first")
 
@@ -84,8 +85,7 @@ class BeamShaper():
                 mask = np.transpose(mask)
             return mask
         if mask_type == "Wedge":
-            M1 = Simple1DWedgeMask(self.x_array_in,self.input_wavelength,angle)
-            mask = np.tile(M1, (self.nb_of_samples, 1))
+            mask = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,angle)
             if orientation== "Vertical":
                 mask = np.transpose(mask)
             return mask
