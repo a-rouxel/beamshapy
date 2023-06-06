@@ -306,7 +306,7 @@ class DisplayWidget(QWidget):
 
 
 class SLMMaskWidget(QWidget):
-    def __init__(self, beam_shaper, infos_editor,simulation_editor, slm_mask_config_path="config/slm_mask.yml"):
+    def __init__(self, beam_shaper, infos_editor, simulation_editor, slm_mask_config_path="config/slm_mask.yml"):
 
         super().__init__()
         self.beam_shaper = beam_shaper
@@ -337,10 +337,11 @@ class SLMMaskWidget(QWidget):
         self.discretize_checkbox = QCheckBox("Discretize")
 
         # Add a button to evaluate the user input
-        self.evaluate_button = QPushButton("Evaluate", self)
+        self.evaluate_button = QPushButton("Generate final mask", self)
         self.evaluate_button.clicked.connect(self.evaluate_operation)
 
         self.save_mask_button = QPushButton("Save final mask")
+        self.save_mask_button.setDisabled(True)
         self.save_mask_button.clicked.connect(self.on_resulting_mask_save)
 
         # List to store references to the mask widgets
@@ -365,17 +366,21 @@ class SLMMaskWidget(QWidget):
         self.operation_layout.addRow(self.operation_input)
         self.operation_layout.addRow(self.discretize_checkbox)
         self.operation_layout.addRow(self.evaluate_button)
-        self.operation_layout.addRow(self.save_mask_button)
 
         self.left_layout_masks.addWidget(self.group_box)
+
+        # Create a QVBoxLayout for the save button and result display
+        self.result_layout = QVBoxLayout()
+        self.result_layout.addWidget(self.save_mask_button)
+        self.result_layout.addWidget(self.result_display_widget)
 
         # Create a QHBoxLayout for the whole widget
         self.layout = QHBoxLayout(self)
         self.layout.addLayout(self.left_layout_masks)  # Add the left layout (mask parameters and buttons)
-        self.layout.addWidget(self.result_display_widget)  # Add the right layout (display windows)
+        self.layout.addLayout(self.result_layout)  # Add the save button and result display layout
 
         self.layout.setStretchFactor(self.left_layout_masks, 1)
-        self.layout.setStretchFactor(self.result_display_widget, 2)
+        self.layout.setStretchFactor(self.result_layout, 2)
 
         self.group_box.setStyleSheet("""
             QGroupBox {
@@ -430,6 +435,8 @@ class SLMMaskWidget(QWidget):
             print("Mask data saved !")
         else:
             print("No Mask data to save")
+
+        self.save_mask_button.setDisabled(True)
 
     @pyqtSlot()
     def evaluate_operation(self):
@@ -503,6 +510,8 @@ class SLMMaskWidget(QWidget):
         print(f"M{mask_number}")
         self.masks_dict[
             f"resulting_M"] = self.result_mask
+
+        self.save_mask_button.setDisabled(False)
     @pyqtSlot(np.ndarray, int)
     def update_masks_dict(self, mask, mask_number):
         self.masks_dict[f"M{mask_number}"] = mask

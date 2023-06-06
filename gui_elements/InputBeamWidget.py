@@ -17,6 +17,7 @@ import h5py
 import matplotlib.figure as mpl_fig
 import matplotlib.backends.backend_qt5agg as mpl_backend
 import numpy as np
+from LightPipes import mm
 
 class InputBeamIntensityDisplay(QWidget):
     def __init__(self):
@@ -99,6 +100,8 @@ class Worker(QThread):
         input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
         self.finished_generate_input_beam.emit(input_field)
 
+
+
 class InputBeamWidget(QWidget):
     def __init__(self, beam_shaper, infos_editor,simulation_editor,input_beam_editor):
         super().__init__()
@@ -126,6 +129,7 @@ class InputBeamWidget(QWidget):
         self.run_button.clicked.connect(self.run_beam_generation)
 
         self.save_input_beam_button = QPushButton("Save Intensity and Phase")
+        self.save_input_beam_button.setDisabled(True)
         self.save_input_beam_button.clicked.connect(self.on_input_beam_saved)
 
         # Create a group box for the run button
@@ -177,10 +181,13 @@ class InputBeamWidget(QWidget):
             with h5py.File(file_path, 'w') as f:
                 f.create_dataset('intensity', data=intensity)
                 f.create_dataset('phase', data=phase)
+                f.create_dataset('x_vector_mm', data=self.beam_shaper.x_array_out / mm)
 
             print("Field data saved !")
         else:
             print("No field data to save")
+
+        self.save_input_beam_button.setDisabled(True)
 
     def run_beam_generation(self):
         # Get the configs from the editors
@@ -195,6 +202,7 @@ class InputBeamWidget(QWidget):
     @pyqtSlot(Field)
     def display_input_beam_intensity(self, input_beam):
         print("Displaying input beam intensity")
+        self.save_input_beam_button.setDisabled(False)
         self.last_generated_beam_field = input_beam
         self.input_beam_intensity_display.display_input_beam_intensity(Intensity(input_beam),self.simulation_editor.config['grid size'], self.simulation_editor.config['grid size'])
 

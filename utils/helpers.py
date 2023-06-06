@@ -83,3 +83,96 @@ def undersample_grid(grid, target_size=40):
     if factor == 0:
         return grid[::1,::1]
     return grid[::factor,::factor]
+
+mm = 10** -3
+def save_generated_fields(beam_shaper, modulated_input_field, fourier_plane_field, fourier_filtered_field, output_field,
+                          results_directory):
+    # Save the modulated input field
+
+    if modulated_input_field is not None:
+        modulated_input_field = modulated_input_field
+
+        # Calculate the other two arrays
+        intensity = np.abs(modulated_input_field.field) ** 2
+        phase = np.angle(modulated_input_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'modulated_input_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'modulated_input_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("modulated_input_field data saved !")
+    else:
+        print("No modulated_input_field data to save")
+
+    if fourier_plane_field is not None:
+        fourier_plane_field = fourier_plane_field
+
+        # Calculate the other two arrays
+        intensity = np.abs(fourier_plane_field.field) ** 2
+        phase = np.angle(fourier_plane_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'fourier_plane_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'fourier_plane_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Fourier plane field data saved !")
+    else:
+        print("No Fourier plane field data to save")
+
+    if fourier_filtered_field is not None:
+        fourier_filtered_field = fourier_filtered_field
+
+        # Calculate the other two arrays
+        intensity = np.abs(fourier_filtered_field.field) ** 2
+        phase = np.angle(fourier_filtered_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'fourier_filtered_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'fourier_filtered_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Fourier filtered field saved !")
+    else:
+        print("No fFourier filtered field to save")
+
+    if output_field is not None:
+        output_field = output_field
+
+        # Calculate the other two arrays
+        intensity = np.abs(output_field.field) ** 2
+        phase = np.angle(output_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'output_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'output_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Output Field data saved !")
+    else:
+        print("No Output Field data to save")

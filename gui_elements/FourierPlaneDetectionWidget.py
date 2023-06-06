@@ -9,6 +9,9 @@ from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 from LightPipes import mm,um,nm
 import numpy as np
+import os
+import h5py
+from utils import *
 class DisplayWidget(QWidget):
     def __init__(self, beam_shaper):
         super().__init__()
@@ -63,7 +66,7 @@ class DisplayWidget(QWidget):
         self.maskFigure.clear()
         ax1 = self.maskFigure.add_subplot(111)
 
-        x_array = x_array / mm
+        x_array = x_array
 
         im = ax1.imshow(Intensity(field),extent=[x_array[0],x_array[-1], x_array[0],x_array[-1]])
         ax1.set_title('Intensity Map')
@@ -109,17 +112,17 @@ class PropagatedFFTModulatedBeamDisplay(QWidget):
         self.layout.addWidget(self.tabWidget)
 
     @pyqtSlot(Field)
-    def display_propagated_FFT_modulated_beam(self, propagated_FFT_modulated_beam):
-        self.propagated_display.displayMask(propagated_FFT_modulated_beam, self.propagated_display.beam_shaper.x_array_out / mm)
+    def display_fourier_plane_field(self, fourier_plane_field):
+        self.propagated_display.displayMask(fourier_plane_field, self.propagated_display.beam_shaper.x_array_out / mm)
 
     @pyqtSlot(Field)
-    def display_filtered_beam(self, filtered_beam):
-        self.filtered_display.displayMask(filtered_beam, self.filtered_display.beam_shaper.x_array_out / mm)
+    def display_fourier_filtered_field(self, fourier_filtered_field):
+        self.filtered_display.displayMask(fourier_filtered_field, self.filtered_display.beam_shaper.x_array_out / mm)
 
 class PropagatedImagePlaneDisplay(DisplayWidget):
     @pyqtSlot(Field)
-    def display_propagated_to_image_plane(self, propagated_to_image_plane):
-        self.displayMask(propagated_to_image_plane,self.beam_shaper.x_array_in/mm)
+    def display_output_field(self, output_field):
+        self.displayMask(output_field,self.beam_shaper.x_array_in/mm)
 
 class PropagationEditor(QWidget):
     def __init__(self):
@@ -215,19 +218,23 @@ class Worker(QThread):
         modulated_input_beam = self.beam_shaper.phase_modulate_input_beam(self.result_mask)
         self.finished_modulate_input_beam.emit(modulated_input_beam)
 
-        propagated_FFT_modulated_beam = self.beam_shaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
-        self.finished_propagate_FFT_modulated_beam.emit(propagated_FFT_modulated_beam)
+        fourier_plane_field = self.beam_shaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
+        self.finished_propagate_FFT_modulated_beam.emit(fourier_plane_field)
 
-        filtered_beam = self.beam_shaper.filter_beam()
+        fourier_filtered_field = self.beam_shaper.filter_beam()
+        self.finished_propagate_filter_beam.emit(fourier_filtered_field)
 
-        propagated_to_image_plane = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
-        self.finished_propagate_to_image_plane.emit(propagated_to_image_plane)
+        output_field = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
+        self.finished_propagate_to_image_plane.emit(output_field)
 class FourierPlaneDetectionWidget(QWidget):
-    def __init__(self,beam_shaper,slm_widget):
+    def __init__(self,beam_shaper,infos_editor,slm_widget):
         super().__init__()
-        self.layout = QHBoxLayout()
+
         self.beam_shaper = beam_shaper
+        self.infos_editor = infos_editor
         self.slm_widget = slm_widget
+
+        self.layout = QHBoxLayout()
 
         self.propagation_editor = PropagationEditor()
         self.layout.addWidget(self.propagation_editor)
@@ -235,23 +242,29 @@ class FourierPlaneDetectionWidget(QWidget):
         self.result_display_widget = QTabWidget()
 
         self.modulated_input_field_display = ModulatedInputFieldDisplay(self.beam_shaper)
-        self.propagated_FFT_modulated_beam_display = PropagatedFFTModulatedBeamDisplay(self.beam_shaper)
-        self.propagated_image_plane_display = PropagatedImagePlaneDisplay(self.beam_shaper)
+        self.fourier_plane_field_display = PropagatedFFTModulatedBeamDisplay(self.beam_shaper)
+        self.image_plane_field_display = PropagatedImagePlaneDisplay(self.beam_shaper)
 
 
         self.result_display_widget.addTab(self.modulated_input_field_display, "Modulated Input Field")
-        self.result_display_widget.addTab(self.propagated_FFT_modulated_beam_display, "Fourier Plane")
-        self.result_display_widget.addTab(self.propagated_image_plane_display, "Image Plane")
+        self.result_display_widget.addTab(self.fourier_plane_field_display, "Fourier Plane")
+        self.result_display_widget.addTab(self.image_plane_field_display, "Image Plane")
 
         self.propagate_button = QPushButton('Propagate')  # Create a button
         self.propagate_button.setStyleSheet('QPushButton {background-color: gray; color: white;}')        # Connect the button to the run_dimensioning method
         self.propagate_button.clicked.connect(self.run_propagate)
+
+        
+        self.save_button = QPushButton('Save Propagated Fields')  # Create a button
+        self.save_button.setDisabled(True)
+        self.save_button.clicked.connect(self.on_propagated_beams_save)
 
         # Create a group box for the run button
         self.run_button_group_box = QGroupBox()
         run_button_group_layout = QVBoxLayout()
 
         run_button_group_layout.addWidget(self.propagate_button)
+        run_button_group_layout.addWidget(self.save_button)
         run_button_group_layout.addWidget(self.result_display_widget)
 
         self.run_button_group_box.setLayout(run_button_group_layout)
@@ -262,32 +275,46 @@ class FourierPlaneDetectionWidget(QWidget):
         self.layout.setStretchFactor(self.result_display_widget, 3)
         self.setLayout(self.layout)
 
+
+    def on_propagated_beams_save(self):
+        # self.result_directory = initialize_directory(self.infos_editor.config)
+        self.simulation_name = self.infos_editor.config['simulation name']
+        self.results_directory = self.infos_editor.config['results directory']
+        results_directory = os.path.join(self.results_directory, self.simulation_name)
+        os.makedirs(results_directory, exist_ok=True)
+
+        save_generated_fields(self.beam_shaper, self.modulated_input_field, self.fourier_plane_field, self.fourier_filtered_field, self.output_field,
+                              results_directory)
+
+        self.save_button.setDisabled(True)
+
     def run_propagate(self):
 
 
         self.worker = Worker(self.beam_shaper, self.slm_widget)
         self.worker.finished_modulate_input_beam.connect(self.display_modulated_input_field)
-        self.worker.finished_propagate_FFT_modulated_beam.connect(self.display_propagated_FFT_modulated_beam)
-        self.worker.finished_propagate_filter_beam.connect(self.display_filtered_beam)
-        self.worker.finished_propagate_to_image_plane.connect(self.display_propagated_to_image_plane)
+        self.worker.finished_propagate_FFT_modulated_beam.connect(self.display_fourier_plane_field)
+        self.worker.finished_propagate_filter_beam.connect(self.display_fourier_filtered_field)
+        self.worker.finished_propagate_to_image_plane.connect(self.display_output_field)
         self.worker.start()
 
     @pyqtSlot(Field)
     def display_modulated_input_field(self, modulated_input_field):
+        self.save_button.setDisabled(False)
         self.modulated_input_field = modulated_input_field
         self.modulated_input_field_display.display_modulated_input_field(self.modulated_input_field)
 
     @pyqtSlot(Field)
-    def display_propagated_FFT_modulated_beam(self, propagated_FFT_modulated_beam):
-        self.propagated_FFT_modulated_beam = propagated_FFT_modulated_beam
-        self.propagated_FFT_modulated_beam_display.display_propagated_FFT_modulated_beam(self.propagated_FFT_modulated_beam)
+    def display_fourier_plane_field(self, fourier_plane_field):
+        self.fourier_plane_field = fourier_plane_field
+        self.fourier_plane_field_display.display_fourier_plane_field(self.fourier_plane_field)
 
     @pyqtSlot(Field)
-    def display_filtered_beam(self, filtered_beam):
-        self.filtered_beam = filtered_beam
-        self.propagated_FFT_modulated_beam_display.display_filtered_beam(self.filtered_beam)
+    def display_fourier_filtered_field(self, fourier_filtered_field):
+        self.fourier_filtered_field = fourier_filtered_field
+        self.fourier_plane_field_display.display_fourier_filtered_field(self.fourier_filtered_field)
 
     @pyqtSlot(Field)
-    def display_propagated_to_image_plane(self, propagated_to_image_plane):
-        self.propagated_to_image_plane = propagated_to_image_plane
-        self.propagated_image_plane_display.display_propagated_to_image_plane(self.propagated_to_image_plane)
+    def display_output_field(self, output_field):
+        self.output_field = output_field
+        self.image_plane_field_display.display_output_field(self.output_field)

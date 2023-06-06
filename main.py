@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.SLM_mask_dock)
         #
         self.fourier_plane_detection_widget = FourierPlaneDetectionWidget(self.BeamShaper,
+                                                                          self.infos_editor,
                                                                          self.SLM_mask_widget,
                                                                          )
         self.fourier_plane_detection_dock = QDockWidget("Detection")
