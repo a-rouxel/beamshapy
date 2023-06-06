@@ -157,28 +157,30 @@ class InputBeamWidget(QWidget):
         # self.result_directory = initialize_directory(self.infos_editor.config)
         self.simulation_name = self.infos_editor.config['simulation name']
         self.results_directory = self.infos_editor.config['results directory']
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        results_directory = os.path.join(self.results_directory, self.simulation_name,timestamp)
+        results_directory = os.path.join(self.results_directory, self.simulation_name)
         os.makedirs(results_directory, exist_ok=True)
-
 
         if self.last_generated_beam_field is not None:
             last_generated_beam_field = self.last_generated_beam_field
 
             # Calculate the other two arrays
-            intensity = np.abs(last_generated_beam_field.field)**2
+            intensity = np.abs(last_generated_beam_field.field) ** 2
             phase = np.angle(last_generated_beam_field.field)
 
             # Save the arrays in an H5 file
-            print(os.path.join(results_directory, 'input_field.h5'))
-            with h5py.File(os.path.join(results_directory, 'input_field.h5'), 'w') as f:
+            file_path = os.path.join(results_directory, 'input_field.h5')
+            counter = 0
+            while os.path.exists(f'{file_path}'):
+                counter += 1
+                file_path = os.path.join(results_directory, f'input_field_{counter}.h5')
+
+            with h5py.File(file_path, 'w') as f:
                 f.create_dataset('intensity', data=intensity)
                 f.create_dataset('phase', data=phase)
 
             print("Field data saved !")
         else:
             print("No field data to save")
-
 
     def run_beam_generation(self):
         # Get the configs from the editors

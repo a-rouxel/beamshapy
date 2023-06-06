@@ -48,16 +48,16 @@ class InputBeamEditorWidget(QWidget):
 
 
         # Load config button
-        self.load_config_button = QPushButton("Load Config")
-        self.load_config_button.clicked.connect(self.on_load_config_clicked)
-        self.save_config_button = QPushButton("Save Config")
-        self.save_config_button.clicked.connect(self.save_config)
+        # self.load_config_button = QPushButton("Load Config")
+        # self.load_config_button.clicked.connect(self.on_load_config_clicked)
+        # self.save_config_button = QPushButton("Save Config")
+        # self.save_config_button.clicked.connect(self.save_config)
 
         # Create main layout and add widgets
         main_layout = QVBoxLayout()
         main_layout.addWidget(general_group)
-        main_layout.addWidget(self.load_config_button)
-        main_layout.addWidget(self.save_config_button)
+        # main_layout.addWidget(self.load_config_button)
+        # main_layout.addWidget(self.save_config_button)
 
         # Set the layout of the widget within the scroll area
         scroll_widget.setLayout(main_layout)

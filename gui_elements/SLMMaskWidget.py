@@ -7,6 +7,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog
 import numpy as np
 from LightPipes import mm,um
+import os
+from datetime import datetime
+import h5py
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
@@ -27,13 +30,18 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector.addItem("Custom H5 Mask")
         self.mask_type_selector.currentIndexChanged.connect(self.update_mask_params)
 
+
+
         self.inner_layout.addRow("Mask Type", self.mask_type_selector)
 
         self.generate_mask_button = QPushButton("Generate Mask")
         self.generate_mask_button.clicked.connect(self.generate_phase_mask)
 
 
+
         self.inner_layout.addRow(self.generate_mask_button)
+
+
 
         self.normalize_layout = QVBoxLayout()
         self.normalize_checkbox = QCheckBox("Normalize")
@@ -95,6 +103,9 @@ class MaskParamsWidget(QWidget):
         mask_min = mask.min()
         mask_max = mask.max()
         return min_value + (max_value - min_value) * (mask - mask_min) / (mask_max - mask_min)
+
+
+
     def generate_phase_mask(self):
         # Get the mask type
         mask_type = self.mask_type_selector.currentText()
@@ -130,6 +141,8 @@ class MaskParamsWidget(QWidget):
             min_value = float(self.min_value_input.text())
             max_value = float(self.max_value_input.text())
             mask = self.normalize(mask, min_value, max_value)
+
+
 
         self.generated_mask = mask
         self.generate_mask_button.setDisabled(True)
@@ -293,10 +306,11 @@ class DisplayWidget(QWidget):
 
 
 class SLMMaskWidget(QWidget):
-    def __init__(self, beam_shaper, simulation_editor, slm_mask_config_path="config/slm_mask.yml"):
+    def __init__(self, beam_shaper, infos_editor,simulation_editor, slm_mask_config_path="config/slm_mask.yml"):
 
         super().__init__()
         self.beam_shaper = beam_shaper
+        self.infos_editor = infos_editor
         self.simulation_editor = simulation_editor
         self.slm_mask_config_path = slm_mask_config_path
         self.result_tab_index = None
@@ -318,10 +332,16 @@ class SLMMaskWidget(QWidget):
 
         # Create QLineEdit for user input
         self.operation_input = QLineEdit(self)
+        self.operation_input.setPlaceholderText("ex: warp ( M1 + M2 ) * M3")
+
+        self.discretize_checkbox = QCheckBox("Discretize")
 
         # Add a button to evaluate the user input
         self.evaluate_button = QPushButton("Evaluate", self)
         self.evaluate_button.clicked.connect(self.evaluate_operation)
+
+        self.save_mask_button = QPushButton("Save final mask")
+        self.save_mask_button.clicked.connect(self.on_resulting_mask_save)
 
         # List to store references to the mask widgets
         self.masks_params_widgets = []
@@ -335,14 +355,19 @@ class SLMMaskWidget(QWidget):
         self.mask_area_widget = QWidget()
         self.mask_area_widget.setLayout(self.mask_layout)
         self.mask_area.setWidget(self.mask_area_widget)
+        self.mask_area.setStyleSheet("QScrollArea { border: none; }")
         self.left_layout_masks.addWidget(self.mask_area)
 
         # Create a QVBoxLayout for the operation input and button
-        self.operation_layout = QVBoxLayout()
-        self.operation_layout.addWidget(self.operation_input)
-        self.operation_layout.addWidget(self.evaluate_button)
+        self.group_box = QGroupBox(f"Operations on masks")
+        self.operation_layout = QFormLayout(self.group_box)
 
-        self.left_layout_masks.addLayout(self.operation_layout)
+        self.operation_layout.addRow(self.operation_input)
+        self.operation_layout.addRow(self.discretize_checkbox)
+        self.operation_layout.addRow(self.evaluate_button)
+        self.operation_layout.addRow(self.save_mask_button)
+
+        self.left_layout_masks.addWidget(self.group_box)
 
         # Create a QHBoxLayout for the whole widget
         self.layout = QHBoxLayout(self)
@@ -352,10 +377,62 @@ class SLMMaskWidget(QWidget):
         self.layout.setStretchFactor(self.left_layout_masks, 1)
         self.layout.setStretchFactor(self.result_display_widget, 2)
 
+        self.group_box.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid;
+                border-radius: 7px;
+                margin-top: 0.5em;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 3px 0 3px;
+            }
+        """)
+
+    @staticmethod
+    def discretize_array(array, levels=256):
+        # Find the min and max values in the array
+        min_val = np.min(array)
+        max_val = np.max(array)
+
+        # Normalize array to [0, 1]
+        normalized_array = (array - min_val) / (max_val - min_val)
+
+        # Discretize to specified levels
+        discretized_array = np.round(normalized_array * (levels - 1)).astype(int)
+
+        # Map back to original range
+        discretized_array = (discretized_array / (levels - 1)) * (max_val - min_val) + min_val
+
+        return discretized_array
+
+    def on_resulting_mask_save(self):
+        # self.result_directory = initialize_directory(self.infos_editor.config)
+        self.simulation_name = self.infos_editor.config['simulation name']
+        self.results_directory = self.infos_editor.config['results directory']
+        results_directory = os.path.join(self.results_directory, self.simulation_name)
+        os.makedirs(results_directory, exist_ok=True)
+
+        if self.result_mask is not None:
+            result_mask = self.result_mask
+
+            # Save the arrays in an H5 file
+            file_path = os.path.join(results_directory, 'result_mask.h5')
+            counter = 0
+            while os.path.exists(file_path):
+                counter += 1
+                file_path = os.path.join(results_directory, f'result_mask_{counter}.h5')
+
+            with h5py.File(file_path, 'w') as f:
+                f.create_dataset('mask', data=result_mask)
+
+            print("Mask data saved !")
+        else:
+            print("No Mask data to save")
+
     @pyqtSlot()
     def evaluate_operation(self):
-        # Initialize the resulting mask as an empty mask
-        self.result_mask = np.zeros_like(next(iter(self.masks_dict.values())))
 
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
@@ -391,32 +468,44 @@ class SLMMaskWidget(QWidget):
         for op_name in operations:
             operation = operation.replace(op_name, f"operations['{op_name}']")
 
-        # Evaluate the operation
-        try:
-            self.result_mask = eval(operation)
-        except Exception as e:
-            print(f"Error evaluating operation: {e}")
-            return
+        try :
+            self.result_mask
+            if len(self.result_display_widget) > len(self.masks_params_widgets):
+                self.result_display_widget.removeTab(self.result_display_widget.count()-1)
+        except:
+            print('no')
+            pass
 
-        # Remove the old resulting mask tab if it exists
-        # if self.result_tab_index is not None:
-        #     print('Ouuuuh')
-        #     self.result_display_widget.removeTab(self.result_tab_index)
-        #     self.result_tab_index = None
+        # Initialize the resulting mask as an empty mask
+        self.result_mask = np.zeros_like(next(iter(self.masks_dict.values())))
+
+        # Evaluate the operation
+        if operation != "":
+            try:
+                self.result_mask = eval(operation)
+            except Exception as e:
+                print(f"Error evaluating operation: {e}")
+                return
+
+        if operation == "" and len(self.masks_dict) >0:
+            self.result_mask = self.masks_dict["M1"]
+
+        if self.discretize_checkbox.isChecked():
+            self.result_mask = self.discretize_array(self.result_mask)
 
         # Create a new widget for the display
         result_display = DisplayWidget(self.beam_shaper)  # replace with your actual Display Widget here
         result_display.displayMask(self.result_mask,self.beam_shaper.x_array_in)  # Display the result mask
-
         # Add the result display as a new tab to the result_display_widget and store its index
         self.result_tab_index = self.result_display_widget.addTab(result_display, "Resulting Mask")
+
         mask_number = len(self.masks_params_widgets) + 1
-        print(f"mask_{mask_number}")
+        print(f"M{mask_number}")
         self.masks_dict[
-            f"mask_{mask_number}"] = ""
+            f"resulting_M"] = self.result_mask
     @pyqtSlot(np.ndarray, int)
     def update_masks_dict(self, mask, mask_number):
-        self.masks_dict[f"mask_{mask_number}"] = mask
+        self.masks_dict[f"M{mask_number}"] = mask
 
 
     def new_mask(self):
@@ -434,34 +523,45 @@ class SLMMaskWidget(QWidget):
         new_mask_params_widget.maskGenerated.connect(new_mask_display.displayMask)
         new_mask_params_widget.maskGenerated.connect(lambda mask: self.update_masks_dict(mask, new_mask_params_widget.mask_number))
 
-
+        print(len(self.result_display_widget) -1,len(self.masks_params_widgets))
         # Add the new display as a new tab to the result_display_widget
-        self.result_display_widget.addTab(new_mask_display, f"Mask {mask_number} Display")
+        if len(self.masks_params_widgets) == len(self.result_display_widget) +1:
+            self.result_display_widget.addTab(new_mask_display, f"Mask {mask_number} Display")
+        elif len(self.masks_params_widgets) < len(self.result_display_widget) +1:
+            self.result_display_widget.insertTab(self.result_display_widget.count()-1,new_mask_display, f"Mask {mask_number} Display")
+
         # Add the new mask to the dictionary of masks
         self.masks_dict[
-            f"mask_{mask_number}"] = ""
+            f"M{mask_number}"] = ""
 
     def delete_mask(self):
         if self.masks_params_widgets:
-            print('Aaaaaah')
 
-
-            # Remove the last tab from result_display_widget
-            self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
 
             # Remove the last mask from the dictionary of masks
             mask_number = len(self.masks_params_widgets)
 
             try :
-                self.masks_dict[f"mask_{mask_number+1}"]
-                del self.masks_dict[f"mask_{mask_number + 1}"]
+                self.masks_dict["resulting_M"]
+                del self.masks_dict[f"M{mask_number}"]
+                mask_to_remove = self.masks_params_widgets.pop()
+                self.mask_layout.removeWidget(mask_to_remove)
+                mask_to_remove.deleteLater()
+                # Remove the last tab from result_display_widget
+                self.result_display_widget.removeTab(self.result_display_widget.count() - 2)
+
+                if len(self.masks_params_widgets)==0:
+                    self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
+                    del self.masks_dict["resulting_M"]
 
             except KeyError:
-                del self.masks_dict[f"mask_{mask_number}"]
+                del self.masks_dict[f"M{mask_number}"]
                 # Remove the last mask widget from the mask_layout and the list
                 mask_to_remove = self.masks_params_widgets.pop()
                 self.mask_layout.removeWidget(mask_to_remove)
                 mask_to_remove.deleteLater()
+                # Remove the last tab from result_display_widget
+                self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
 
 
 
