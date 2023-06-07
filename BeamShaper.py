@@ -72,7 +72,7 @@ class BeamShaper():
         self.GridPositionMatrix_X = GridPositionMatrix_X
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
-    def generate_mask(self,mask_type, angle=None,period=None,orientation=None,sigma_x=None,sigma_y=None,threshold=None):
+    def generate_mask(self,mask_type, x_position=None,period=None,orientation=None,sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
 
 
         if self.x_array_in is None:
@@ -85,7 +85,8 @@ class BeamShaper():
                 mask = np.transpose(mask)
             return mask
         if mask_type == "Wedge":
-            mask = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,angle)
+            print(self.focal_length,x_position)
+            mask = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_position,self.focal_length)
             if orientation== "Vertical":
                 mask = np.transpose(mask)
             return mask
@@ -107,9 +108,26 @@ class BeamShaper():
 
             mask = WeightsMask(input_amplitude,target_amplitude,threshold)
             return mask
+        if mask_type == "Custom h5 Mask":
+            if mask_path is None:
+                raise ValueError("Please provide h5 file path for custom mask.")
 
-        else:
-            print("mask_type not recognized")
+            with h5py.File(mask_path, 'r') as f:
+                mask = f['mask'][:]
+
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            if mask.shape != self.GridPositionMatrix_X.shape:
+                new_mask = np.zeros_like(self.GridPositionMatrix_X)
+                x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
+                y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
+                new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
+                mask = new_mask
+
+            else:
+                print("mask_type not recognized")
+            return mask
+
 
     def phase_modulate_input_beam(self,mask):
         self.modulated_input_beam = MultPhase(self.input_beam,mask)

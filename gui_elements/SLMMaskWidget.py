@@ -10,7 +10,7 @@ from LightPipes import mm,um
 import os
 from datetime import datetime
 import h5py
-from utils import save_result_mask, normalize, discretize_array
+from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
@@ -28,7 +28,7 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector.addItem("Wedge")
         self.mask_type_selector.addItem("Phase Reversal")
         self.mask_type_selector.addItem("Weights Sinc")
-        self.mask_type_selector.addItem("Custom H5 Mask")
+        self.mask_type_selector.addItem("Custom h5 Mask")
         self.mask_type_selector.currentIndexChanged.connect(self.update_mask_params)
 
 
@@ -111,7 +111,7 @@ class MaskParamsWidget(QWidget):
         elif mask_type == "Wedge":
 
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
-                                                  angle=float(self.angle.text()),
+                                                  x_position=float(self.position.text())*mm,
                                                   orientation=self.orientation.currentText())
         elif mask_type == "Phase Reversal":
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
@@ -122,11 +122,11 @@ class MaskParamsWidget(QWidget):
         elif mask_type == "Weights Sinc":
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,threshold=float(self.threshold.text()))
 
-        elif mask_type == "Custom H5 Mask":
+        elif mask_type == "Custom h5 Mask":
             # Open a file dialog to select the mask
-            mask_path, _ = QFileDialog.getOpenFileName(self, "Select H5 Mask File", "", "H5 Files (*.h5)")
+            file_path = self.file_path.text()
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
-                                           mask_path=mask_path)
+                                           mask_path=file_path)
         else :
             raise ValueError("Invalid mask type")
 
@@ -164,15 +164,15 @@ class MaskParamsWidget(QWidget):
 
 
         if self.mask_type_selector.currentText() == "Wedge":
-            self.angle = QLineEdit()
-            self.angle.setText(str(0.5))
+            self.position = QLineEdit()
+            self.position.setText(str(5))
             self.orientation = QComboBox()
             self.orientation.addItems(["Horizontal", "Vertical"])
-            self.inner_layout.addRow("angle [in degree]", self.angle)
+            self.inner_layout.addRow("position [in mm]", self.position)
             self.inner_layout.addRow("Orientation", self.orientation)
 
             # Connect the textChanged signal for these parameters
-            self.angle.textChanged.connect(self.enable_generate_mask_button)
+            self.position.textChanged.connect(self.enable_generate_mask_button)
             self.orientation.currentIndexChanged.connect(self.enable_generate_mask_button)
 
 
@@ -197,7 +197,7 @@ class MaskParamsWidget(QWidget):
             self.threshold.textChanged.connect(self.enable_generate_mask_button)
 
         # Custom H5 Mask parameters: file path
-        elif self.mask_type_selector.currentText() == "Custom H5 Mask":
+        elif self.mask_type_selector.currentText() == "Custom h5 Mask":
             self.file_path = QLineEdit()
 
             self.browse_button = QPushButton("Browse")
@@ -337,6 +337,10 @@ class SLMMaskWidget(QWidget):
         self.save_mask_button.setDisabled(True)
         self.save_mask_button.clicked.connect(self.on_resulting_mask_save)
 
+        self.save_crop_mask_button = QPushButton("Crop and Save for SLM")
+        self.save_crop_mask_button.setDisabled(True)
+        self.save_crop_mask_button.clicked.connect(self.on_crop_and_save_as_bmp)
+
         # List to store references to the mask widgets
         self.masks_params_widgets = []
 
@@ -365,6 +369,7 @@ class SLMMaskWidget(QWidget):
         # Create a QVBoxLayout for the save button and result display
         self.result_layout = QVBoxLayout()
         self.result_layout.addWidget(self.save_mask_button)
+        self.result_layout.addWidget(self.save_crop_mask_button)
         self.result_layout.addWidget(self.result_display_widget)
 
         # Create a QHBoxLayout for the whole widget
@@ -400,11 +405,21 @@ class SLMMaskWidget(QWidget):
 
 
         # Save the resulting mask
-        save_result_mask(self.result_mask, results_directory)
+        save_mask(self.result_mask, results_directory)
 
 
         self.save_mask_button.setDisabled(True)
 
+    def on_crop_and_save_as_bmp(self):
+        # self.result_directory = initialize_directory(self.infos_editor.config)
+        self.simulation_name = self.infos_editor.config['simulation name']
+        self.results_directory = self.infos_editor.config['results directory']
+        results_directory = os.path.join(self.results_directory, self.simulation_name)
+
+        # Save the resulting mask
+        crop_and_save_as_bmp(self.result_mask, results_directory,"SLM_mask")
+
+        self.save_crop_mask_button.setDisabled(True)
     @pyqtSlot()
     def evaluate_operation(self):
 
@@ -482,6 +497,7 @@ class SLMMaskWidget(QWidget):
             f"resulting_M"] = self.result_mask
 
         self.save_mask_button.setDisabled(False)
+        self.save_crop_mask_button.setDisabled(False)
     @pyqtSlot(np.ndarray, int)
     def update_masks_dict(self, mask, mask_number):
         self.masks_dict[f"M{mask_number}"] = mask

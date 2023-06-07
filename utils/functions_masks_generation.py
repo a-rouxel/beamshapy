@@ -145,26 +145,14 @@ def Simple1DBlazedGratingMask(x_array, period):
 
     return mask
 
-def discretize_array(array, levels=256):
-    # Find the min and max values in the array
-    min_val = np.min(array)
-    max_val = np.max(array)
-
-    # Normalize array to [0, 1]
-    normalized_array = (array - min_val) / (max_val - min_val)
-
-    # Discretize to specified levels
-    discretized_array = np.round(normalized_array * (levels - 1)).astype(int)
-
-    # Map back to original range
-    discretized_array = (discretized_array / (levels - 1)) * (max_val - min_val) + min_val
-
-    return discretized_array
 
 
-def Simple2DWedgeMask(x_array,wavelength,angle):
 
-    max_phase = 2*np.pi*np.radians(angle) / np.arctan(wavelength/(x_array.max() - x_array.min()))
+def Simple2DWedgeMask(x_array,wavelength,x_position,focal_length):
+
+    angle = np.arctan(x_position/focal_length)
+
+    max_phase = 2*np.pi*angle / np.arctan(wavelength/(x_array.max() - x_array.min()))
     wedge_1D = np.linspace(0, max_phase, x_array.shape[0])
     wedge_2D = np.tile(wedge_1D, ( x_array.shape[0],1))
 

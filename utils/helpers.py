@@ -1,5 +1,7 @@
 import logging
 import os
+
+import matplotlib.pyplot as plt
 import yaml
 from datetime import datetime
 import math
@@ -215,19 +217,99 @@ def save_input_beam(results_directory, beam_shaper, last_generated_beam_field):
         print("Input Field data saved !")
     else:
         print("No field data to save")
-def save_result_mask(result_mask, results_directory):
+def save_mask(mask, results_directory):
     os.makedirs(results_directory, exist_ok=True)
     # Save the arrays in an H5 file
-    file_path = os.path.join(results_directory, 'result_mask.h5')
+    file_path = os.path.join(results_directory, 'slm6608_at1550_WFC_unwrapped.h5')
     counter = 0
     while os.path.exists(file_path):
         counter += 1
-        file_path = os.path.join(results_directory, f'result_mask_{counter}.h5')
+        file_path = os.path.join(results_directory, f'mask_{counter}.h5')
 
     with h5py.File(file_path, 'w') as f:
-        f.create_dataset('mask', data=result_mask)
+        f.create_dataset('mask', data=mask)
 
     print("Mask data saved !")
+
+def crop_center(array_x, nb_of_samples_along_x, nb_of_samples_along_y):
+    y_len, x_len = array_x.shape
+
+    x_start = x_len//2 - nb_of_samples_along_x//2
+    x_end = x_start + nb_of_samples_along_x
+
+    # print(x_start, x_end)
+
+    y_start = y_len//2 - nb_of_samples_along_y//2
+    y_end = y_start + nb_of_samples_along_y
+
+    if nb_of_samples_along_x<array_x.shape[1]:
+        array_x_crop = array_x[:, x_start:x_end]
+    if nb_of_samples_along_y<array_x.shape[0]:
+        array_x_crop = array_x_crop[y_start:y_end, :]
+    if nb_of_samples_along_y>=array_x.shape[0] and nb_of_samples_along_x>=array_x.shape[1]:
+        array_x_crop = array_x
+
+
+    return array_x_crop
+
+from PIL import Image
+
+def discretize_array(array, levels=256):
+    # Find the min and max values in the array
+    min_val = np.min(array)
+    max_val = np.max(array)
+
+    # Normalize array to [0, 1]
+    normalized_array = (array - min_val) / (max_val - min_val)
+
+    # Discretize to specified levels
+    discretized_array = np.round(normalized_array * (levels - 1)).astype(int)
+
+    # Map back to original range
+    discretized_array = (discretized_array / (levels - 1)) * (max_val - min_val) + min_val
+
+
+    return discretized_array
+def crop_and_save_as_bmp(image, results_directory, file_name):
+
+    crop_img = crop_center(image, 1920, 1200)
+    crop_img = np.angle(np.exp(1j*crop_img))
+    crop_img = (crop_img + np.pi) * 255 / (2 * np.pi)
+    crop_img = discretize_array(crop_img, levels=256)
+
+
+    # Convert the image to an array
+    img_array = np.array(crop_img)
+
+    # Check if the image has an alpha channel, if not, add one
+
+    # Create a new array with shape of the image array but with an extra channel
+    new_img_array = np.zeros((img_array.shape[0], img_array.shape[1], 4), dtype=np.uint8)
+
+    # Set RGB channels
+    new_img_array[:,:,0] = img_array
+    # Set Alpha channel
+    new_img_array[..., 3] = 255  # assuming you want a fully opaque image, otherwise adjust this value
+
+
+    # Convert back to an image
+    bmp_img = Image.fromarray(new_img_array)
+
+    plt.imshow(bmp_img)
+    plt.show()
+
+    os.makedirs(results_directory, exist_ok=True)
+
+    # Save the image in a BMP file
+    file_path = os.path.join(results_directory, f'{file_name}.bmp')
+    counter = 0
+    while os.path.exists(file_path):
+        counter += 1
+        file_path = os.path.join(results_directory, f'{file_name}_{counter}.bmp')
+
+    bmp_img.save(file_path)
+
+    print("SLM Mask data saved !")
 
 def find_nearest_index(array, value):
     array = np.asarray(array)
