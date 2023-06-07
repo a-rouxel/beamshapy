@@ -209,44 +209,44 @@ class PropagationEditor(QWidget):
 
         # Create Fourier Plane QFormLayout
         fourier_plane_layout = QFormLayout()
-        self.crop_factor_fourier_x = QLineEdit()
-        self.crop_factor_fourier_x.setText(str(2))
-        self.crop_factor_fourier_y = QLineEdit()
-        self.crop_factor_fourier_y.setText(str(4))
-        self.crop_button = QPushButton('crop')  # Create a button
-        # self.run_button.clicked.connect(self.crop_fourier_plane)
-        self.interpolate_fourier_factor = QLineEdit()
-        self.interpolate_fourier_factor.setText(str(2))
-        self.interpolate_button = QPushButton('interpolate')  # Create a button
+        # self.crop_factor_fourier_x = QLineEdit()
+        # self.crop_factor_fourier_x.setText(str(2))
+        # self.crop_factor_fourier_y = QLineEdit()
+        # self.crop_factor_fourier_y.setText(str(4))
+        # self.crop_button = QPushButton('crop')  # Create a button
+        # # self.run_button.clicked.connect(self.crop_fourier_plane)
+        # self.interpolate_fourier_factor = QLineEdit()
+        # self.interpolate_fourier_factor.setText(str(2))
+        # self.interpolate_button = QPushButton('interpolate')  # Create a button
         # self.interpolate_button.clicked.connect(self.interpolate_fourier_plane)
 
-        fourier_plane_layout.addRow("crop factor X", self.crop_factor_fourier_x)
-        fourier_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
-        fourier_plane_layout.addRow(self.crop_button)
-        fourier_plane_layout.addRow("interpolation factor", self.interpolate_fourier_factor)
-        fourier_plane_layout.addRow(self.interpolate_button)
+        # fourier_plane_layout.addRow("crop factor X", self.crop_factor_fourier_x)
+        # fourier_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
+        # fourier_plane_layout.addRow(self.crop_button)
+        # fourier_plane_layout.addRow("interpolation factor", self.interpolate_fourier_factor)
+        # fourier_plane_layout.addRow(self.interpolate_button)
 
         fourier_plane_group = QGroupBox("Fourier Plane Settings")
         fourier_plane_group.setLayout(fourier_plane_layout)
 
         # Create Image Plane QFormLayout
         image_plane_layout = QFormLayout()
-        self.crop_factor_image_x = QLineEdit()
-        self.crop_factor_image_x.setText(str(2))
-        self.crop_factor_image_y = QLineEdit()
-        self.crop_factor_image_y.setText(str(4))
-        self.crop_button = QPushButton('crop')  # Create a button
-        # self.run_button.clicked.connect(self.crop_fourier_plane)
-        self.interpolate_image_factor = QLineEdit()
-        self.interpolate_image_factor.setText(str(2))
-        self.interpolate_button = QPushButton('interpolate')  # Create a button
+        # self.crop_factor_image_x = QLineEdit()
+        # self.crop_factor_image_x.setText(str(2))
+        # self.crop_factor_image_y = QLineEdit()
+        # self.crop_factor_image_y.setText(str(4))
+        # self.crop_button = QPushButton('crop')  # Create a button
+        # # self.run_button.clicked.connect(self.crop_fourier_plane)
+        # self.interpolate_image_factor = QLineEdit()
+        # self.interpolate_image_factor.setText(str(2))
+        # self.interpolate_button = QPushButton('interpolate')  # Create a button
         # self.interpolate_button.clicked.connect(self.interpolate_fourier_plane)
 
-        image_plane_layout.addRow("crop factor X", self.crop_factor_image_y)
-        image_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
-        image_plane_layout.addRow(self.crop_button)
-        image_plane_layout.addRow("interpolation factor", self.interpolate_image_factor)
-        image_plane_layout.addRow(self.interpolate_button)
+        # image_plane_layout.addRow("crop factor X", self.crop_factor_image_y)
+        # image_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
+        # image_plane_layout.addRow(self.crop_button)
+        # image_plane_layout.addRow("interpolation factor", self.interpolate_image_factor)
+        # image_plane_layout.addRow(self.interpolate_button)
 
         image_plane_group = QGroupBox("Image Plane Settings")
 
