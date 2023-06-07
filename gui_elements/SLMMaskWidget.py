@@ -372,8 +372,7 @@ class SLMMaskWidget(QWidget):
         self.layout.addLayout(self.left_layout_masks)  # Add the left layout (mask parameters and buttons)
         self.layout.addLayout(self.result_layout)  # Add the save button and result display layout
 
-        self.layout.setStretchFactor(self.left_layout_masks, 1)
-        self.layout.setStretchFactor(self.result_layout, 2)
+
 
         self.group_box.setStyleSheet("""
             QGroupBox {
@@ -387,6 +386,9 @@ class SLMMaskWidget(QWidget):
                 padding: 0 3px 0 3px;
             }
         """)
+
+        self.layout.setStretchFactor(self.left_layout_masks, 1)
+        self.layout.setStretchFactor(self.result_layout, 2)
 
 
 

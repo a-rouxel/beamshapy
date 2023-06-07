@@ -56,21 +56,17 @@ class MainWindow(QMainWindow):
 
         self.input_beam_dock.raise_()
         #
-        # self.input_beam_dock.raise_()
-        # # Connect the signal to the slot
-    #     self.tabifiedDockWidgetActivated.connect(self.check_dock_visibility)
-    # #
-    # def check_dock_visibility(self, dock_widget):
-    #     # If the currently selected dock widget is the Scene dock, hide the system_config_dock
-    #     if dock_widget is self.input_beam_dock :
-    #         self.system_config_dock.setVisible(False)
-    #     else:
-    #         self.system_config_dock.setVisible(True)
+        # # Load and apply the stylesheet
+        # with open("./Ubuntu.qss", "r") as file:
+        #     qss = file.read()
+        #     self.setStyleSheet(qss)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon('logo_beam_shaper.png')) # Add this line
+    app.setWindowIcon(QIcon('logo_beam_shaper.png'))
+
     main_window = MainWindow()
     main_window.show()
+
     sys.exit(app.exec_())

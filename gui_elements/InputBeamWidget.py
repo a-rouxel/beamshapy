@@ -125,7 +125,7 @@ class InputBeamWidget(QWidget):
 
         # Create the run button
         self.run_button = QPushButton('Generate Input Beam')
-        self.run_button.setStyleSheet('QPushButton {background-color: gray; color: white;}')        # Connect the button to the run_dimensioning method
+        # self.run_button.setStyleSheet('QPushButton {background-color: gray; color: white;}')        # Connect the button to the run_dimensioning method
         self.run_button.clicked.connect(self.run_beam_generation)
 
         self.save_input_beam_button = QPushButton("Save Intensity and Phase")
@@ -142,6 +142,7 @@ class InputBeamWidget(QWidget):
 
         # Create a QVBoxLayout for the editors
         self.editor_layout = QVBoxLayout()
+
         self.editor_layout.addWidget(self.infos_editor)
         self.editor_layout.addWidget(self.simulation_editor)
         self.editor_layout.addWidget(self.input_beam_editor)
