@@ -457,15 +457,18 @@ class SLMMaskWidget(QWidget):
         if operation != "":
             try:
                 self.result_mask = eval(operation)
+                self.beam_shaper.mask = self.result_mask
             except Exception as e:
                 print(f"Error evaluating operation: {e}")
                 return
 
         if operation == "" and len(self.masks_dict) >0:
             self.result_mask = self.masks_dict["M1"]
+            self.beam_shaper.mask = self.result_mask
 
         if self.discretize_checkbox.isChecked():
             self.result_mask = discretize_array(self.result_mask)
+            self.beam_shaper.mask = self.result_mask
 
         # Create a new widget for the display
         result_display = DisplayWidget(self.beam_shaper)  # replace with your actual Display Widget here

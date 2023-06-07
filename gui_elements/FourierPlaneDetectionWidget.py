@@ -8,6 +8,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 from LightPipes import mm,um,nm
+from PyQt5.QtWidgets import QMessageBox
 import numpy as np
 import os
 import h5py
@@ -279,6 +280,7 @@ class Worker(QThread):
         self.slm_widget = slm_widget
 
     def run(self):
+
         self.result_mask = self.slm_widget.result_mask
 
         modulated_input_beam = self.beam_shaper.phase_modulate_input_beam(self.result_mask)
@@ -293,9 +295,10 @@ class Worker(QThread):
         output_field = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
         self.finished_propagate_to_image_plane.emit(output_field)
 class FourierPlaneDetectionWidget(QWidget):
-    def __init__(self,beam_shaper,infos_editor,slm_widget):
+    def __init__(self,main_window,beam_shaper,infos_editor,slm_widget):
         super().__init__()
 
+        self.main_window = main_window
         self.beam_shaper = beam_shaper
         self.infos_editor = infos_editor
         self.slm_widget = slm_widget
@@ -356,6 +359,25 @@ class FourierPlaneDetectionWidget(QWidget):
 
     def run_propagate(self):
 
+        try:
+            self.beam_shaper.input_beam
+        except :
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("No Input Field Detected")
+            msg.setInformativeText("Please create an input field before propagating.")
+            msg.setWindowTitle("Error")
+            msg.exec_()
+
+        try:
+            self.beam_shaper.mask
+        except :
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("No SLM Mask Detected")
+            msg.setInformativeText("Please create a SLM mask before propagating.")
+            msg.setWindowTitle("Error")
+            msg.exec_()
 
         self.worker = Worker(self.beam_shaper, self.slm_widget)
         self.worker.finished_modulate_input_beam.connect(self.display_modulated_input_field)
