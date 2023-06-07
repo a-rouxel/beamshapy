@@ -17,10 +17,12 @@ class DisplayWidget(QWidget):
         super().__init__()
 
         self.beam_shaper = beam_shaper
+
         # Create a tab widget to hold the plots
         self.tabWidget = QTabWidget(self)
 
         # Create figures and figure canvases for the plots
+        # Existing figures, canvases and toolbars
         self.maskFigure = Figure()
         self.maskCanvas = FigureCanvas(self.maskFigure)
         self.maskToolbar = NavigationToolbar(self.maskCanvas, self)
@@ -33,7 +35,21 @@ class DisplayWidget(QWidget):
         self.cutYCanvas = FigureCanvas(self.cutYFigure)
         self.cutYToolbar = NavigationToolbar(self.cutYCanvas, self)
 
+        # New figures, canvases and toolbars for Phase
+        self.phaseFigure = Figure()
+        self.phaseCanvas = FigureCanvas(self.phaseFigure)
+        self.phaseToolbar = NavigationToolbar(self.phaseCanvas, self)
+
+        self.phaseCutXFigure = Figure()
+        self.phaseCutXCanvas = FigureCanvas(self.phaseCutXFigure)
+        self.phaseCutXToolbar = NavigationToolbar(self.phaseCutXCanvas, self)
+
+        self.phaseCutYFigure = Figure()
+        self.phaseCutYCanvas = FigureCanvas(self.phaseCutYFigure)
+        self.phaseCutYToolbar = NavigationToolbar(self.phaseCutYCanvas, self)
+
         # Create Widgets for each tab to hold the toolbar and the figure canvas
+        # Existing widgets
         self.maskWidget = QWidget()
         self.maskLayout = QVBoxLayout(self.maskWidget)
         self.maskLayout.addWidget(self.maskToolbar)
@@ -49,10 +65,33 @@ class DisplayWidget(QWidget):
         self.cutYLayout.addWidget(self.cutYToolbar)
         self.cutYLayout.addWidget(self.cutYCanvas)
 
+        # New widgets for Phase
+        self.phaseWidget = QWidget()
+        self.phaseLayout = QVBoxLayout(self.phaseWidget)
+        self.phaseLayout.addWidget(self.phaseToolbar)
+        self.phaseLayout.addWidget(self.phaseCanvas)
+
+        self.phaseCutXWidget = QWidget()
+        self.phaseCutXLayout = QVBoxLayout(self.phaseCutXWidget)
+        self.phaseCutXLayout.addWidget(self.phaseCutXToolbar)
+        self.phaseCutXLayout.addWidget(self.phaseCutXCanvas)
+
+        self.phaseCutYWidget = QWidget()
+        self.phaseCutYLayout = QVBoxLayout(self.phaseCutYWidget)
+        self.phaseCutYLayout.addWidget(self.phaseCutYToolbar)
+        self.phaseCutYLayout.addWidget(self.phaseCutYCanvas)
+
         # Add the Widgets to the tab widget
-        self.tabWidget.addTab(self.maskWidget, "Map")
-        self.tabWidget.addTab(self.cutXWidget, "Cut X")
-        self.tabWidget.addTab(self.cutYWidget, "Cut Y")
+        # Existing tabs
+        self.tabWidget.addTab(self.maskWidget, "Intensity Map")
+        self.tabWidget.addTab(self.cutXWidget, "Intensity Cut X")
+        self.tabWidget.addTab(self.cutYWidget, "Intensity Cut Y")
+
+        # New tabs for Phase
+        self.tabWidget.addTab(self.phaseWidget, "Phase Map")
+        self.tabWidget.addTab(self.phaseCutXWidget, "Phase Cut X")
+        self.tabWidget.addTab(self.phaseCutYWidget, "Phase Cut Y")
+
 
         # Create a QVBoxLayout and add the tab widget to it
 
@@ -92,6 +131,33 @@ class DisplayWidget(QWidget):
         ax3.set_xlabel('Position along Y [in mm]')
         ax3.set_ylabel('Intensity Value [no units]')
         self.cutYCanvas.draw()
+
+        self.phaseFigure.clear()
+        ax4 = self.phaseFigure.add_subplot(111)
+        im = ax4.imshow(Phase(field), extent=[x_array[0], x_array[-1], x_array[0], x_array[-1]])
+        ax4.set_title('Phase Map')
+        ax4.set_xlabel('Position along X [in mm]')
+        ax4.set_ylabel('Position along Y [in mm]')
+        self.phaseFigure.colorbar(im, ax=ax4, label='Phase Value [no units]')
+        self.phaseCanvas.draw()
+
+        # For Phase Cut X (assuming phaseCutX(field) returns the required data for phase cut along X)
+        self.phaseCutXFigure.clear()
+        ax5 = self.phaseCutXFigure.add_subplot(111)
+        ax5.plot(x_array, Phase(field)[Phase(field).shape[0] // 2, :])
+        ax5.set_title('Phase Cut along X')
+        ax5.set_xlabel('Position along X [in mm]')
+        ax5.set_ylabel('Phase Value [no units]')
+        self.phaseCutXCanvas.draw()
+
+        # For Phase Cut Y (assuming phaseCutY(field) returns the required data for phase cut along Y)
+        self.phaseCutYFigure.clear()
+        ax6 = self.phaseCutYFigure.add_subplot(111)
+        ax6.plot(x_array, Phase(field)[:, Phase(field).shape[1] // 2])
+        ax6.set_title('Phase Cut along Y')
+        ax6.set_xlabel('Position along Y [in mm]')
+        ax6.set_ylabel('Phase Value [no units]')
+        self.phaseCutYCanvas.draw()
 class ModulatedInputFieldDisplay(DisplayWidget):
     @pyqtSlot(Field)
     def display_modulated_input_field(self, modulated_input_field):
