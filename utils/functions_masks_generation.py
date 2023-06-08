@@ -183,6 +183,30 @@ def PhaseReversalMask(GridPositionMatrix_X,GridPositionMatrix_Y,input_waist,sigm
 
     return M
 
+def RectangularAmplitudeMask(GridPositionMatrix_X, GridPositionMatrix_Y, angle, width, height):
+
+    mask = np.zeros(GridPositionMatrix_X.shape)
+    # rotate the grid
+    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
+    GridPositionMatrix_Y_rot = GridPositionMatrix_Y * np.cos(angle) + GridPositionMatrix_X * np.sin(angle)
+
+    mask[(np.abs(GridPositionMatrix_X_rot) < width/2) & (np.abs(GridPositionMatrix_Y_rot) < height/2)] = 1
+
+    return mask
+
+def PiPhaseJumpMask(GridPositionMatrix_X, GridPositionMatrix_Y, orientation, position):
+
+    mask = np.zeros(GridPositionMatrix_X.shape)
+
+    if orientation == "Vertical":
+        mask[GridPositionMatrix_Y > position] = np.pi
+    elif orientation == "Horizontal":
+        mask[GridPositionMatrix_X > position] = np.pi
+
+    return mask
+
+
+
 def WeightsMask(input_amplitude,target_amplitude,threshold=10**-1):
 
     weights =  np.abs(np.divide(target_amplitude,input_amplitude,out=np.ones_like(target_amplitude),where=np.abs(input_amplitude)>threshold))

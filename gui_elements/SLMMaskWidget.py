@@ -26,6 +26,8 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector.addItem("None")
         self.mask_type_selector.addItem("Grating")
         self.mask_type_selector.addItem("Wedge")
+        self.mask_type_selector.addItem("Rect Amplitude")
+        self.mask_type_selector.addItem("Phase Jump")
         self.mask_type_selector.addItem("Phase Reversal")
         self.mask_type_selector.addItem("Weights Sinc")
         self.mask_type_selector.addItem("Custom h5 Mask")
@@ -111,8 +113,22 @@ class MaskParamsWidget(QWidget):
         elif mask_type == "Wedge":
 
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
-                                                  x_position=float(self.position.text())*mm,
-                                                  orientation=self.orientation.currentText())
+                                                  position=float(self.position.text())*mm,
+                                                  angle = np.radians(float(self.angle_wedge.text())))
+
+        elif mask_type == "Rect Amplitude":
+
+            mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                  angle = np.radians(float(self.angle.text())),
+                                                  width = float(self.width.text())*mm,
+                                                  height = float(self.height.text())*mm)
+        elif mask_type == "Phase Jump":
+
+            mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                  orientation = self.orientation_phase_jump.currentText(),
+                                                  position = float(self.position_phase_jump.text())*mm)
+
+
         elif mask_type == "Phase Reversal":
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
                                                   sigma_x=float(self.sigma_x.text()),
@@ -166,14 +182,42 @@ class MaskParamsWidget(QWidget):
         if self.mask_type_selector.currentText() == "Wedge":
             self.position = QLineEdit()
             self.position.setText(str(5))
-            self.orientation = QComboBox()
-            self.orientation.addItems(["Horizontal", "Vertical"])
+            self.angle_wedge = QLineEdit()
+            self.angle_wedge.setText(str(0))
             self.inner_layout.addRow("position [in mm]", self.position)
-            self.inner_layout.addRow("Orientation", self.orientation)
+            self.inner_layout.addRow("angle [in °]", self.angle_wedge)
 
             # Connect the textChanged signal for these parameters
             self.position.textChanged.connect(self.enable_generate_mask_button)
-            self.orientation.currentIndexChanged.connect(self.enable_generate_mask_button)
+            self.angle_wedge.textChanged.connect(self.enable_generate_mask_button)
+
+        if self.mask_type_selector.currentText() == "Rect Amplitude":
+            self.angle = QLineEdit()
+            self.angle.setText(str(0))
+            self.width = QLineEdit()
+            self.width.setText(str(5))
+            self.height = QLineEdit()
+            self.height.setText(str(5))
+            self.inner_layout.addRow("angle [in degrees]", self.angle)
+            self.inner_layout.addRow("width [in mm]", self.width)
+            self.inner_layout.addRow("height [in mm]", self.height)
+
+            # Connect the textChanged signal for these parameters
+            self.width.textChanged.connect(self.enable_generate_mask_button)
+            self.height.textChanged.connect(self.enable_generate_mask_button)
+            self.angle.textChanged.connect(self.enable_generate_mask_button)
+
+        if self.mask_type_selector.currentText() == "Phase Jump":
+            self.orientation_phase_jump = QComboBox()
+            self.orientation_phase_jump.addItems(["Horizontal", "Vertical"])
+            self.position_phase_jump = QLineEdit()
+            self.position_phase_jump.setText(str(5))
+            self.inner_layout.addRow("Orientation", self.orientation_phase_jump)
+            self.inner_layout.addRow("position [in mm]", self.position_phase_jump)
+
+            # Connect the textChanged signal for these parameters
+            self.position_phase_jump.textChanged.connect(self.enable_generate_mask_button)
+            self.orientation_phase_jump.currentIndexChanged.connect(self.enable_generate_mask_button)
 
 
         if self.mask_type_selector.currentText() == "Phase Reversal":

@@ -72,7 +72,7 @@ class BeamShaper():
         self.GridPositionMatrix_X = GridPositionMatrix_X
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
-    def generate_mask(self,mask_type, x_position=None,period=None,orientation=None,sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
+    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
 
 
         if self.x_array_in is None:
@@ -85,11 +85,23 @@ class BeamShaper():
                 mask = np.transpose(mask)
             return mask
         if mask_type == "Wedge":
-            print(self.focal_length,x_position)
-            mask = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_position,self.focal_length)
-            if orientation== "Vertical":
-                mask = np.transpose(mask)
+            x_proj = np.cos(angle)*position
+            y_proj = np.sin(angle)*position
+
+            mask_x = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_proj,self.focal_length)
+            mask_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
+            mask = mask_x + mask_y
+
             return mask
+
+        if mask_type == "Rect Amplitude":
+            mask = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
+            return mask
+
+        if mask_type == "Phase Jump":
+            mask = PiPhaseJumpMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,orientation, position)
+            return mask
+
         if mask_type == "Phase Reversal":
             self.sigma_x = sigma_x
             self.sigma_y = sigma_y
@@ -108,6 +120,8 @@ class BeamShaper():
 
             mask = WeightsMask(input_amplitude,target_amplitude,threshold)
             return mask
+
+
         if mask_type == "Custom h5 Mask":
             if mask_path is None:
                 raise ValueError("Please provide h5 file path for custom mask.")
