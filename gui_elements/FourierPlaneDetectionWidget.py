@@ -135,7 +135,7 @@ class DisplayWidget(QWidget):
 
         self.phaseFigure.clear()
         ax4 = self.phaseFigure.add_subplot(111)
-        im = ax4.imshow(Phase(field), extent=[x_array[0], x_array[-1], x_array[0], x_array[-1]])
+        im = ax4.imshow(Phase(field), extent=[x_array[0], x_array[-1], x_array[0], x_array[-1]],cmap="twilight")
         ax4.set_title('Phase Map')
         ax4.set_xlabel('Position along X [in mm]')
         ax4.set_ylabel('Position along Y [in mm]')

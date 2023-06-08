@@ -10,7 +10,7 @@ from LightPipes import mm,um
 import os
 from datetime import datetime
 import h5py
-from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp
+from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, translate
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
@@ -72,6 +72,31 @@ class MaskParamsWidget(QWidget):
         self.normalize_widget.setLayout(self.normalize_layout)
         self.inner_layout.addRow(self.normalize_widget)
 
+
+
+        self.translate_layout = QVBoxLayout()
+        self.translate_checkbox = QCheckBox("Translate")
+        self.translate_checkbox.stateChanged.connect(self.handle_translate_checked)
+        self.translate_layout.addWidget(self.translate_checkbox)
+
+        self.translate_value = QLineEdit("0")
+        self.translate_group = QGroupBox("Value")
+        self.translate_group.setLayout(QHBoxLayout())
+        self.translate_group.layout().addWidget(self.translate_value)
+        self.translate_layout.addWidget(self.translate_group)
+
+        # Initially hide the min and max value inputs
+        self.translate_group.hide()
+
+        # Add normalize layout to a QWidget and then add the QWidget to the inner layout
+        self.translate_widget = QWidget()
+        self.translate_widget.setLayout(self.translate_layout)
+        self.inner_layout.addRow(self.translate_widget)
+
+
+
+
+
         self.layout = QVBoxLayout(self)  # This will set QVBoxLayout as the layout of this widget
         self.layout.addWidget(self.group_box)  # Now adding group_box to the QVBoxLayout
 
@@ -96,6 +121,14 @@ class MaskParamsWidget(QWidget):
         else:
             self.min_group.hide()
             self.max_group.hide()
+
+    def handle_translate_checked(self, state):
+        # Show or hide the min and max value inputs based on the checkbox state
+        if state == Qt.Checked:
+            self.translate_group.show()
+        else:
+            self.translate_group.hide()
+
 
     def enable_generate_mask_button(self):
         # Enable the "Generate Mask" button
@@ -151,6 +184,10 @@ class MaskParamsWidget(QWidget):
             max_value = float(self.max_value_input.text())
             mask = normalize(mask, min_value, max_value)
 
+        if self.translate_checkbox.isChecked():
+            value = int(self.translate_value.text())
+            mask = translate(mask, value)
+
 
 
         self.generated_mask = mask
@@ -159,12 +196,12 @@ class MaskParamsWidget(QWidget):
 
     def update_mask_params(self):
         # Clear the previous parameters (if any) by removing the layout's rows, but keep the first 2 rows
-        for i in range(self.inner_layout.rowCount() - 1, 2, -1):  # start from last row, stop at 2 (exclusive), step backwards
+        for i in range(self.inner_layout.rowCount() - 1, 3, -1):  # start from last row, stop at 2 (exclusive), step backwards
             # Remove row at index i from the layout
             self.inner_layout.removeRow(i)
 
         self.mask_type_selector.currentIndexChanged.connect(self.enable_generate_mask_button)
-
+        self.translate_value.textChanged.connect(self.enable_generate_mask_button)
         # Circular Mask parameters: radius, intensity
         if self.mask_type_selector.currentText() == "Grating":
             self.period = QLineEdit()

@@ -97,6 +97,10 @@ def normalize(mask, min_value, max_value):
     return min_value + (max_value - min_value) * (mask - mask_min) / (mask_max - mask_min)
 
 
+def translate(mask,value):
+    mask = np.roll(mask, value, axis=1)
+    return mask
+
 def save_generated_fields(beam_shaper, modulated_input_field, fourier_plane_field, fourier_filtered_field, output_field,
                           results_directory):
 
