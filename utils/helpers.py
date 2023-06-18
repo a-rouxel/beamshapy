@@ -319,3 +319,58 @@ def find_nearest_index(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx
+
+def downsample(array, downsample_factor):
+    """
+    Downsamples a 2D numpy array by averaging over blocks of size `downsample_factor`.
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Input 2D array to downsample.
+    downsample_factor : int
+        Downsampling factor. The size of the input array should be divisible by this factor.
+
+    Returns
+    -------
+    numpy.ndarray
+        Downsampled array.
+    """
+    if not array.shape[0] % downsample_factor == 0 or not array.shape[1] % downsample_factor == 0:
+        raise ValueError("Both dimensions of the input array must be divisible by the downsample factor.")
+
+    # Reshape to a higher dimensional array
+    reshaped = array.reshape((array.shape[0] // downsample_factor, downsample_factor,
+                              array.shape[1] // downsample_factor, downsample_factor))
+
+    # Take the mean over the extra dimensions
+    downsampled = reshaped.mean(axis=1).mean(axis=-1)
+
+    return downsampled
+
+def downsample_1d(array, downsample_factor):
+    """
+    Downsamples a 1D numpy array by averaging over blocks of size `downsample_factor`.
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Input 1D array to downsample.
+    downsample_factor : int
+        Downsampling factor. The size of the input array should be divisible by this factor.
+
+    Returns
+    -------
+    numpy.ndarray
+        Downsampled array.
+    """
+    if not len(array) % downsample_factor == 0:
+        raise ValueError("The size of the input array must be divisible by the downsample factor.")
+
+    # Reshape to a higher dimensional array
+    reshaped = array.reshape((len(array) // downsample_factor, downsample_factor))
+
+    # Take the mean over the extra dimension
+    downsampled = reshaped.mean(axis=1)
+
+    return downsampled
