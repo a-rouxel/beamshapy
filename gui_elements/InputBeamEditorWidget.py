@@ -73,23 +73,6 @@ class InputBeamEditorWidget(QWidget):
         if self.initial_config_file is not None:
             self.load_config(self.initial_config_file)
 
-    def save_config(self):
-        if hasattr(self, 'config'):
-            options = QFileDialog.Options()
-            file_name, _ = QFileDialog.getSaveFileName(self, "Save Config", "",
-                                                       "YAML Files (*.yml *.yaml);;All Files (*)", options=options)
-            if file_name:
-                # Update the config from the current input fields
-                self.config = self.get_config()
-                with open(file_name, 'w') as file:
-                    yaml.safe_dump(self.config, file, default_flow_style=False)
-
-
-    def on_load_config_clicked(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open YAML", "", "YAML Files (*.yml)")
-        if file_name:
-            self.load_config(file_name)
-
     def load_config(self, file_name):
         with open(file_name, 'r') as file:
             self.config = yaml.safe_load(file)

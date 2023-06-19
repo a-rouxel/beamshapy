@@ -95,7 +95,7 @@ class Worker(QThread):
     def run(self):
         # Put your analysis here
 
-        self.beam_shaper.generate_sampling()
+        self.beam_shaper.generate_sampling(self.simulation_config,self.input_beam_config)
         self.simulation_editor.update_nb_of_samples(self.beam_shaper.nb_of_samples)
         input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
         self.finished_generate_input_beam.emit(input_field)

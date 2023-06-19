@@ -13,7 +13,7 @@ class BeamShaper():
         if self.initial_config_file is not None:
             self.load_config(self.initial_config_file)
 
-        self.generate_sampling()
+        self.generate_sampling(simulation_config,input_beam_config)
 
     def generate_input_beam(self,input_beam_config):
 
@@ -42,9 +42,7 @@ class BeamShaper():
 
         return F
 
-    def generate_sampling(self):
-        simulation_config = self.simulation_config
-        input_beam_config = self.input_beam_config
+    def generate_sampling(self,simulation_config,input_beam_config):
 
         self.input_grid_size = simulation_config["grid size"]*mm
         self.input_grid_sampling = simulation_config["grid sampling"] *um

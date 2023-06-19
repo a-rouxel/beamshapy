@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QTabWidget, QGroupBox, QHBoxLayout, QFileDialog, QLineEdit, QComboBox, QFormLayout, QLabel, QScrollArea, QVBoxLayout, QCheckBox, QSpinBox, QDoubleSpinBox, QWidget)
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-
+import re
 from PyQt5.QtWidgets import (QWidget, QFormLayout, QComboBox, QDoubleSpinBox,
                              QPushButton, QLineEdit, QLabel)
 from PyQt5.QtCore import Qt
@@ -502,8 +502,10 @@ class SLMMaskWidget(QWidget):
 
         self.save_crop_mask_button.setDisabled(True)
     @pyqtSlot()
-    def evaluate_operation(self):
 
+
+
+    def evaluate_operation(self):
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
 
@@ -513,11 +515,14 @@ class SLMMaskWidget(QWidget):
 
         # Custom operations dictionary
         operations = {
-            "warp": lambda x: np.angle(np.exp(1j*x))  # define your warp function here
+            "warp": lambda x: np.angle(np.exp(1j * x))  # define your warp function here
         }
 
-        # Split the operation into parts
-        parts = operation.split()
+        # Define the regex pattern to split operation into parts
+        pattern = f"({'|'.join(re.escape(op) for op in allowed_ops)}|{'|'.join(re.escape(mask) for mask in allowed_masks)}|[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?|\w+)"
+
+        # Split the operation into parts using regex
+        parts = re.findall(pattern, operation)
 
         # Check each part of the operation
         for part in parts:
