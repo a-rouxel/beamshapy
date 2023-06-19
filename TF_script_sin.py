@@ -1,36 +1,36 @@
 from BeamShaper import BeamShaper
 from utils import *
 from LightPipes import *
-#
-#
-# simulation_config = load_yaml_config("config/simulation.yml")
-# input_beam_config = load_yaml_config("config/input_beam.yml")
-#
-#
-# results_directory = "experiment_results"
-#
-#
-#
-# BeamShaper = BeamShaper(simulation_config,
-#                         input_beam_config,
-#                         initial_config_file="config/optical_system.yml")
-#
-# # Generate System Sampling
-# BeamShaper.generate_sampling()
-#
-# # Generate System Input Beam Field
-# input_field = BeamShaper.generate_input_beam(input_beam_config)
+
+
+simulation_config = load_yaml_config("config/simulation.yml")
+input_beam_config = load_yaml_config("config/input_beam.yml")
+
+
+results_directory = "experiment_results"
+
+
+
+BeamShaper = BeamShaper(simulation_config,
+                        input_beam_config,
+                        initial_config_file="config/optical_system.yml")
+
+# Generate System Sampling
+BeamShaper.generate_sampling()
+
+# Generate System Input Beam Field
+input_field = BeamShaper.generate_input_beam(input_beam_config)
 
 import matplotlib.pyplot as plt
 
 def sinc(x,w):
     return np.sin(np.pi*x/w)/(np.pi*x/w)
 
-# w_0 = 2.3*mm
-# sampling = BeamShaper.nb_of_samples
-# new_amp = sinc(BeamShaper.GridPositionMatrix_X,w_0)
-# phase = np.zeros_like(new_amp)
-# phase[new_amp>0] = np.pi
+w_0 = 2.3*mm
+sampling = BeamShaper.nb_of_samples
+new_amp = sinc(BeamShaper.GridPositionMatrix_X,w_0)
+phase = np.zeros_like(new_amp)
+phase[new_amp>0] = np.pi
 
 
 def rect_(x, w):
@@ -40,30 +40,26 @@ def rect_(x, w):
 def sin_(x,period):
     return np.sin(2*np.pi*x/period)
 
-w = 2
-x_in = np.linspace(-5,5,1000)
-# plt.plot(x_in,rect_(x_in,2*w ),label="flat top")
-# plt.plot(x_in,sin_(x_in,4*w/1 ),label="sinus - period = 4w")
-# plt.plot(x_in,sin_(x_in,4*w/2 ),label="sinus - period = 2w")
-# plt.plot(x_in,sin_(x_in,4*w/3 ),label="sinus - period = w")
-plt.plot(x_in,rect_(x_in,2*w )*sin_(x_in,4*w/1 ),label="flattop x sin - p = 4w")
-plt.plot(x_in,rect_(x_in,2*w )*sin_(x_in,4*w/2 ),'--',label="flattop x sin - p = 2w")
-plt.plot(x_in,rect_(x_in,2*w )*sin_(x_in,4*w/3 ),'--',label="flat top x sin - p = 4w/3")
-plt.plot(x_in,rect_(x_in,2*w )*sin_(x_in,4*w/4 ),'--',label="flat top x sin - p = w")
+w = 1*mm
 
-plt.legend()
+plt.plot(BeamShaper.x_array_in/mm,sinc(BeamShaper.GridPositionMatrix_X, w_0)[sampling//2,:])
 plt.show()
-# plt.plot(BeamShaper.x_array_in/mm,sinc(BeamShaper.GridPositionMatrix_X, w_0)[sampling//2,:])
-# plt.show()
-#
-# sinc_field = SubIntensity(input_field, np.abs(new_amp)**2)
-# sinc_field = SubPhase(sinc_field, phase)
-#
-# fourier_plane = PipFFT(sinc_field)
 
-# plt.plot(BeamShaper.x_array_out/mm,(Intensity(fourier_plane)[sampling//2,:]))
-# plt.show()
-#
+X,Y = np.meshgrid(BeamShaper.x_array_in,BeamShaper.x_array_in)
+
+complex_amp = sin_(X,5*mm)
+
+plt.plot(BeamShaper.x_array_in/mm,complex_amp[sampling//2,:])
+plt.show()
+
+sinc_field = SubIntensity(input_field, np.abs(complex_amp)**2)
+sinc_field = SubPhase(sinc_field, np.angle(complex_amp))
+
+fourier_plane = PipFFT(sinc_field)
+
+plt.plot(BeamShaper.x_array_out/mm,(Intensity(fourier_plane)[sampling//2,:]))
+plt.show()
+
 # plt.plot(BeamShaper.x_array_out/mm,rect_(BeamShaper.x_array_out, w_0))
 # plt.show()
 
