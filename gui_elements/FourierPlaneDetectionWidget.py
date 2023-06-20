@@ -24,28 +24,30 @@ class DisplayWidget(QWidget):
         # Existing figures, canvases and toolbars
         self.maskFigure = Figure()
         self.maskCanvas = FigureCanvas(self.maskFigure)
+        self.maskCanvas.mpl_connect('button_press_event', self.onclick_intensity)
         self.maskToolbar = NavigationToolbar(self.maskCanvas, self)
 
         self.cutXFigure = Figure()
-        self.cutXCanvas = FigureCanvas(self.cutXFigure)
-        self.cutXToolbar = NavigationToolbar(self.cutXCanvas, self)
+        self.cutXCanvas_intensity = FigureCanvas(self.cutXFigure)
+        self.cutXToolbar = NavigationToolbar(self.cutXCanvas_intensity, self)
 
         self.cutYFigure = Figure()
-        self.cutYCanvas = FigureCanvas(self.cutYFigure)
-        self.cutYToolbar = NavigationToolbar(self.cutYCanvas, self)
+        self.cutYCanvas_intensity = FigureCanvas(self.cutYFigure)
+        self.cutYToolbar = NavigationToolbar(self.cutYCanvas_intensity, self)
 
         # New figures, canvases and toolbars for Phase
         self.phaseFigure = Figure()
         self.phaseCanvas = FigureCanvas(self.phaseFigure)
+        self.phaseCanvas.mpl_connect('button_press_event', self.onclick_phase)
         self.phaseToolbar = NavigationToolbar(self.phaseCanvas, self)
 
         self.phaseCutXFigure = Figure()
-        self.phaseCutXCanvas = FigureCanvas(self.phaseCutXFigure)
-        self.phaseCutXToolbar = NavigationToolbar(self.phaseCutXCanvas, self)
+        self.cutXCanvas_phase = FigureCanvas(self.phaseCutXFigure)
+        self.phaseCutXToolbar = NavigationToolbar(self.cutXCanvas_phase, self)
 
         self.phaseCutYFigure = Figure()
-        self.phaseCutYCanvas = FigureCanvas(self.phaseCutYFigure)
-        self.phaseCutYToolbar = NavigationToolbar(self.phaseCutYCanvas, self)
+        self.cutYCanvas_phase = FigureCanvas(self.phaseCutYFigure)
+        self.phaseCutYToolbar = NavigationToolbar(self.cutYCanvas_phase, self)
 
         # Create Widgets for each tab to hold the toolbar and the figure canvas
         # Existing widgets
@@ -57,12 +59,12 @@ class DisplayWidget(QWidget):
         self.cutXWidget = QWidget()
         self.cutXLayout = QVBoxLayout(self.cutXWidget)
         self.cutXLayout.addWidget(self.cutXToolbar)
-        self.cutXLayout.addWidget(self.cutXCanvas)
+        self.cutXLayout.addWidget(self.cutXCanvas_intensity)
 
         self.cutYWidget = QWidget()
         self.cutYLayout = QVBoxLayout(self.cutYWidget)
         self.cutYLayout.addWidget(self.cutYToolbar)
-        self.cutYLayout.addWidget(self.cutYCanvas)
+        self.cutYLayout.addWidget(self.cutYCanvas_intensity)
 
         # New widgets for Phase
         self.phaseWidget = QWidget()
@@ -73,12 +75,12 @@ class DisplayWidget(QWidget):
         self.phaseCutXWidget = QWidget()
         self.phaseCutXLayout = QVBoxLayout(self.phaseCutXWidget)
         self.phaseCutXLayout.addWidget(self.phaseCutXToolbar)
-        self.phaseCutXLayout.addWidget(self.phaseCutXCanvas)
+        self.phaseCutXLayout.addWidget(self.cutXCanvas_phase)
 
         self.phaseCutYWidget = QWidget()
         self.phaseCutYLayout = QVBoxLayout(self.phaseCutYWidget)
         self.phaseCutYLayout.addWidget(self.phaseCutYToolbar)
-        self.phaseCutYLayout.addWidget(self.phaseCutYCanvas)
+        self.phaseCutYLayout.addWidget(self.cutYCanvas_phase)
 
         # Add the Widgets to the tab widget
         # Existing tabs
@@ -115,7 +117,13 @@ class DisplayWidget(QWidget):
             phase_field = Phase(field)
             x_array_2D = x_array
 
+        self.x_array_in = x_array_2D
+        self.intensity = intensity_field
+        self.phase = phase_field
+
         im = ax1.imshow(intensity_field,extent=[x_array_2D[0],x_array_2D[-1], x_array_2D[0],x_array_2D[-1]])
+        self.vline_intensity = ax1.axvline(x_array_2D[0], color='r')  # initial position of vertical line
+        self.hline_intensity = ax1.axhline(x_array_2D[0], color='r')  # initial position of horizontal line
         ax1.set_title('Intensity Map')
         ax1.set_xlabel('Position along X [in mm]')
         ax1.set_ylabel('Position along Y [in mm]')
@@ -125,24 +133,26 @@ class DisplayWidget(QWidget):
         # Plot the cut along X
         self.cutXFigure.clear()
         ax2 = self.cutXFigure.add_subplot(111)
-        ax2.plot(x_array,Intensity(field)[Intensity(field).shape[0] // 2, :])
+        self.cutXLine_intensity, = ax2.plot(x_array_2D,intensity_field[intensity_field.shape[0] // 2, :])
         ax2.set_title('Cut along X')
         ax2.set_xlabel('Position along X [in mm]')
         ax2.set_ylabel('Intensity Value [no units]')
-        self.cutXCanvas.draw()
+        self.cutXCanvas_intensity.draw()
 
         # Plot the cut along Y
         self.cutYFigure.clear()
         ax3 = self.cutYFigure.add_subplot(111)
-        ax3.plot(x_array,Intensity(field)[:, Intensity(field).shape[1] // 2])
+        self.cutYLine_intensity, = ax3.plot(x_array_2D,intensity_field[:, intensity_field.shape[1] // 2])
         ax3.set_title('Cut along Y')
         ax3.set_xlabel('Position along Y [in mm]')
         ax3.set_ylabel('Intensity Value [no units]')
-        self.cutYCanvas.draw()
+        self.cutYCanvas_intensity.draw()
 
         self.phaseFigure.clear()
         ax4 = self.phaseFigure.add_subplot(111)
         im = ax4.imshow(phase_field, extent=[x_array_2D[0], x_array_2D[-1], x_array_2D[0], x_array_2D[-1]],cmap="twilight")
+        self.vline_phase = ax4.axvline(x_array_2D[0], color='r')  # initial position of vertical line
+        self.hline_phase = ax4.axhline(x_array_2D[0], color='r')  # initial position of horizontal line
         ax4.set_title('Phase Map')
         ax4.set_xlabel('Position along X [in mm]')
         ax4.set_ylabel('Position along Y [in mm]')
@@ -152,20 +162,71 @@ class DisplayWidget(QWidget):
         # For Phase Cut X (assuming phaseCutX(field) returns the required data for phase cut along X)
         self.phaseCutXFigure.clear()
         ax5 = self.phaseCutXFigure.add_subplot(111)
-        ax5.plot(x_array, Phase(field)[Phase(field).shape[0] // 2, :])
+        self.cutXLine_phase, = ax5.plot(x_array_2D, phase_field[phase_field.shape[0] // 2, :])
         ax5.set_title('Phase Cut along X')
         ax5.set_xlabel('Position along X [in mm]')
         ax5.set_ylabel('Phase Value [no units]')
-        self.phaseCutXCanvas.draw()
+        self.cutXCanvas_phase.draw()
 
         # For Phase Cut Y (assuming phaseCutY(field) returns the required data for phase cut along Y)
         self.phaseCutYFigure.clear()
         ax6 = self.phaseCutYFigure.add_subplot(111)
-        ax6.plot(x_array, Phase(field)[:, Phase(field).shape[1] // 2])
+        self.cutYLine_phase, = ax6.plot(x_array_2D, phase_field[:, phase_field.shape[1] // 2])
         ax6.set_title('Phase Cut along Y')
         ax6.set_xlabel('Position along Y [in mm]')
         ax6.set_ylabel('Phase Value [no units]')
-        self.phaseCutYCanvas.draw()
+        self.cutYCanvas_phase.draw()
+
+    def onclick_intensity(self, event):
+        ix, iy = event.xdata, event.ydata
+
+        # Convert click coordinates to array indices
+        x_index = np.argmin(np.abs(self.x_array_in - ix))
+        y_index = np.argmin(np.abs(self.x_array_in - iy))
+
+        # Move the vertical and horizontal lines to the clicked position
+        self.vline_intensity.set_xdata(ix)
+        self.hline_intensity.set_ydata(iy)
+        self.maskCanvas.draw()
+
+        # Update the cut along X plot
+        cut_x_data = self.intensity[y_index, :]
+        self.cutXLine_intensity.set_ydata(cut_x_data)
+        self.cutXFigure.axes[0].set_ylim(cut_x_data.min() - np.abs(cut_x_data.min())*0.1, cut_x_data.max() +  np.abs(cut_x_data.max())*0.1)
+        self.cutXCanvas_intensity.draw()
+
+        # Update the cut along Y plot
+        cut_y_data = self.intensity[:, x_index]
+        self.cutYLine_intensity.set_ydata(cut_y_data)
+        self.cutYFigure.axes[0].set_ylim(cut_y_data.min() - np.abs(cut_y_data.min())*0.1, cut_y_data.max() +  np.abs(cut_y_data.max())*0.1)
+        self.cutYCanvas_intensity.draw()
+
+    def onclick_phase(self, event):
+        ix, iy = event.xdata, event.ydata
+
+        # Convert click coordinates to array indices
+        x_index = np.argmin(np.abs(self.x_array_in - ix))
+        y_index = np.argmin(np.abs(self.x_array_in - iy))
+
+        # Move the vertical and horizontal lines to the clicked position
+        self.vline_phase.set_xdata(ix)
+        self.hline_phase.set_ydata(iy)
+        self.phaseCanvas.draw()
+
+        # Update the cut along X plot
+        cut_x_data = self.phase[y_index, :]
+        self.cutXLine_phase.set_ydata(cut_x_data)
+        self.phaseCutXFigure.axes[0].set_ylim(cut_x_data.min() - np.abs(cut_x_data.min())*0.1, cut_x_data.max() +  np.abs(cut_x_data.max())*0.1)
+        self.cutXCanvas_phase.draw()
+
+        # Update the cut along Y plot
+        cut_y_data = self.phase[:, x_index]
+        self.cutYLine_phase.set_ydata(cut_y_data)
+        self.phaseCutYFigure.axes[0].set_ylim(cut_y_data.min() - np.abs(cut_y_data.min())*0.1, cut_y_data.max() +  np.abs(cut_y_data.max())*0.1)
+        self.cutYCanvas_phase.draw()
+
+
+
 class ModulatedInputFieldDisplay(DisplayWidget):
     @pyqtSlot(Field)
     def display_modulated_input_field(self, modulated_input_field,downsample_check,downsample_factor):
@@ -366,9 +427,10 @@ class FourierPlaneDetectionWidget(QWidget):
             msg.setInformativeText("Please create an input field before propagating.")
             msg.setWindowTitle("Error")
             msg.exec_()
+            return
 
         try:
-            self.beam_shaper.mask
+            self.slm_widget.result_mask
         except :
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
@@ -376,6 +438,7 @@ class FourierPlaneDetectionWidget(QWidget):
             msg.setInformativeText("Please create a SLM mask before propagating.")
             msg.setWindowTitle("Error")
             msg.exec_()
+            return
 
         if self.downsampling_checkbox.isChecked():
             self.downsample_factor = int(self.downsampling_factor_edit.text())

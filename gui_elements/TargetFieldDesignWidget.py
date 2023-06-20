@@ -380,6 +380,7 @@ class DisplayWidget(QWidget):
         # Create figures and figure canvases for the plots
         self.amplitudeFigure = Figure()
         self.target_amplitudeCanvas = FigureCanvas(self.amplitudeFigure)
+        self.target_amplitudeCanvas.mpl_connect('button_press_event', self.onclick)
         self.target_amplitudeToolbar = NavigationToolbar(self.target_amplitudeCanvas, self)
 
         self.cutXFigure = Figure()
@@ -396,6 +397,7 @@ class DisplayWidget(QWidget):
         self.target_amplitudelayout.addWidget(self.target_amplitudeToolbar)
         self.target_amplitudelayout.addWidget(self.target_amplitudeCanvas)
 
+
         self.cutXWidget = QWidget()
         self.cutXLayout = QVBoxLayout(self.cutXWidget)
         self.cutXLayout.addWidget(self.cutXToolbar)
@@ -411,6 +413,8 @@ class DisplayWidget(QWidget):
         self.tabWidget.addTab(self.cutXWidget, "Cut X")
         self.tabWidget.addTab(self.cutYWidget, "Cut Y")
 
+
+
         # Create a QVBoxLayout and add the tab widget to it
 
         layout = QVBoxLayout(self)
@@ -421,8 +425,11 @@ class DisplayWidget(QWidget):
     def displaytarget_amplitude(self, amplitude,x_array):
         # Plot the mask
         self.x_array_in = x_array/mm
+        self.amplitude = amplitude
         self.amplitudeFigure.clear()
         ax1 = self.amplitudeFigure.add_subplot(111)
+        self.vline = ax1.axvline(self.x_array_in[0], color='r')  # initial position of vertical line
+        self.hline = ax1.axhline(self.x_array_in[0], color='r')  # initial position of horizontal line
         im = ax1.imshow(amplitude,extent=[self.x_array_in[0],self.x_array_in[-1], self.x_array_in[0],self.x_array_in[-1]])
         ax1.set_title('Target Amplitude Map')
         ax1.set_xlabel('Position along X [in mm]')
@@ -433,7 +440,7 @@ class DisplayWidget(QWidget):
         # Plot the cut along X
         self.cutXFigure.clear()
         ax2 = self.cutXFigure.add_subplot(111)
-        ax2.plot(self.x_array_in,amplitude[amplitude.shape[0] // 2, :])
+        self.cutXLine, = ax2.plot(self.x_array_in,amplitude[amplitude.shape[0] // 2, :])
         ax2.set_title('Cut along X')
         ax2.set_xlabel('Position along X [in mm]')
         ax2.set_ylabel('Amplitude values [no units]')
@@ -442,10 +449,30 @@ class DisplayWidget(QWidget):
         # Plot the cut along Y
         self.cutYFigure.clear()
         ax3 = self.cutYFigure.add_subplot(111)
-        ax3.plot(self.x_array_in,amplitude[:, amplitude.shape[1] // 2])
+        self.cutYLine, = ax3.plot(self.x_array_in,amplitude[:, amplitude.shape[1] // 2])
         ax3.set_title('Cut along Y')
         ax3.set_xlabel('Position along Y [in mm]')
         ax3.set_ylabel('Amplitude values [no units]')
+        self.cutYCanvas.draw()
+
+    def onclick(self, event):
+        ix, iy = event.xdata, event.ydata
+
+        # Convert click coordinates to array indices
+        x_index = np.argmin(np.abs(self.x_array_in - ix))
+        y_index = np.argmin(np.abs(self.x_array_in - iy))
+
+        # Move the vertical and horizontal lines to the clicked position
+        self.vline.set_xdata(ix)
+        self.hline.set_ydata(iy)
+        self.target_amplitudeCanvas.draw()
+
+        # Update the cut along X plot
+        self.cutXLine.set_ydata(self.amplitude[y_index, :])
+        self.cutXCanvas.draw()
+
+        # Update the cut along Y plot
+        self.cutYLine.set_ydata(self.amplitude[:, x_index])
         self.cutYCanvas.draw()
 
 
@@ -700,7 +727,7 @@ class TargetFieldDesignWidget(QWidget):
 
         self.is_resulting_amplitude_exist = True
 
-        self.logger.info(" ... evaluation of the operation on target amplitudes  : complex amplitude generation  ✔")
+        self.logger.info(" ... evaluation of the operation on target amplitudes  : target amplitude generation  ✔")
 
     @pyqtSlot(np.ndarray, int)
     def update_target_amplitudes_dict(self, target_amplitude, target_amplitude_number):

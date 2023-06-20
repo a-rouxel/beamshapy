@@ -79,7 +79,8 @@ class MainWindow(QMainWindow):
         self.SLM_mask_widget = SLMMaskWidget(self.BeamShaper,
                                              self.infos_editor,
                                              self.simulation_editor,
-                                             slm_mask_config_path="config/slm_mask.yml")
+                                             slm_mask_config_path="config/slm_mask.yml",
+                                             logger = self.logger)
         self.SLM_mask_dock = QDockWidget("SLM Masks")
         self.SLM_mask_dock.setWidget(self.SLM_mask_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.SLM_mask_dock)

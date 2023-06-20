@@ -10,11 +10,12 @@ from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, 
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
-    def __init__(self,beam_shaper,mask_number):
+    def __init__(self,beam_shaper,mask_number,logger=None):
         super().__init__()
 
         self.beam_shaper = beam_shaper
         self.mask_number = mask_number
+        self.logger = logger
         self.group_box = QGroupBox(f"Mask {mask_number}")
         self.inner_layout = QFormLayout(self.group_box)
 
@@ -148,13 +149,22 @@ class MaskParamsWidget(QWidget):
                                                   angle = np.radians(float(self.angle_wedge.text())))
         elif mask_type == "ϕ target field":
 
-            mask = self.beam_shaper.generate_mask(mask_type=mask_type)
+            try:
+                self.beam_shaper.inverse_fourier_target_field
+                mask = self.beam_shaper.generate_mask(mask_type=mask_type)
+            except:
+                return
+
 
         elif mask_type == "modulation amplitude":
 
-            mask = self.beam_shaper.generate_mask(mask_type=mask_type,
-                                                  amplitude_factor=float(self.amplitude_factor.text()),
-                                                  threshold=float(self.threshold.text()))
+            try:
+                self.beam_shaper.inverse_fourier_target_field
+                mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                      amplitude_factor=float(self.amplitude_factor.text()),
+                                                      threshold=float(self.threshold.text()))
+            except:
+                return
 
 
         elif mask_type == "Rect Amplitude":
@@ -174,7 +184,6 @@ class MaskParamsWidget(QWidget):
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
                                                   sigma_x=float(self.sigma_x.text()),
                                                   sigma_y=float(self.sigma_y.text()))
-            print(mask)
 
         elif mask_type == "Weights Sinc":
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,threshold=float(self.threshold.text()))
@@ -334,6 +343,8 @@ class DisplayWidget(QWidget):
         # Create figures and figure canvases for the plots
         self.maskFigure = Figure()
         self.maskCanvas = FigureCanvas(self.maskFigure)
+        self.maskCanvas.mpl_connect('button_press_event', self.onclick)
+
         self.maskToolbar = NavigationToolbar(self.maskCanvas, self)
 
         self.cutXFigure = Figure()
@@ -376,7 +387,10 @@ class DisplayWidget(QWidget):
         # Plot the mask
         self.x_array_in = x_array/mm
         self.maskFigure.clear()
+        self.mask = mask
         ax1 = self.maskFigure.add_subplot(111)
+        self.vline = ax1.axvline(self.x_array_in[0], color='r')  # initial position of vertical line
+        self.hline = ax1.axhline(self.x_array_in[0], color='r')  # initial position of horizontal line
         im = ax1.imshow(mask,extent=[self.x_array_in[0],self.x_array_in[-1], self.x_array_in[0],self.x_array_in[-1]])
         ax1.set_title('Mask')
         ax1.set_xlabel('Position along X [in mm]')
@@ -387,7 +401,7 @@ class DisplayWidget(QWidget):
         # Plot the cut along X
         self.cutXFigure.clear()
         ax2 = self.cutXFigure.add_subplot(111)
-        ax2.plot(self.x_array_in,mask[mask.shape[0] // 2, :])
+        self.cutXLine, = ax2.plot(self.x_array_in,mask[mask.shape[0] // 2, :])
         ax2.set_title('Cut along X')
         ax2.set_xlabel('Position along X [in mm]')
         ax2.set_ylabel('Phase Value [in rad]')
@@ -396,17 +410,37 @@ class DisplayWidget(QWidget):
         # Plot the cut along Y
         self.cutYFigure.clear()
         ax3 = self.cutYFigure.add_subplot(111)
-        ax3.plot(self.x_array_in,mask[:, mask.shape[1] // 2])
+        self.cutYLine, = ax3.plot(self.x_array_in,mask[:, mask.shape[1] // 2])
         ax3.set_title('Cut along Y')
         ax3.set_xlabel('Position along Y [in mm]')
         ax3.set_ylabel('Phase Value [in rad]')
         self.cutYCanvas.draw()
+    def onclick(self, event):
+        ix, iy = event.xdata, event.ydata
+
+        # Convert click coordinates to array indices
+        x_index = np.argmin(np.abs(self.x_array_in - ix))
+        y_index = np.argmin(np.abs(self.x_array_in - iy))
+
+        # Move the vertical and horizontal lines to the clicked position
+        self.vline.set_xdata(ix)
+        self.hline.set_ydata(iy)
+        self.maskCanvas.draw()
+
+        # Update the cut along X plot
+        self.cutXLine.set_ydata(self.mask[y_index, :])
+        self.cutXCanvas.draw()
+
+        # Update the cut along Y plot
+        self.cutYLine.set_ydata(self.mask[:, x_index])
+        self.cutYCanvas.draw()
 
 
 class SLMMaskWidget(QWidget):
-    def __init__(self, beam_shaper, infos_editor, simulation_editor, slm_mask_config_path="config/slm_mask.yml"):
+    def __init__(self, beam_shaper, infos_editor, simulation_editor, slm_mask_config_path="config/slm_mask.yml",logger=None):
 
         super().__init__()
+        self.logger = logger
         self.beam_shaper = beam_shaper
         self.infos_editor = infos_editor
         self.simulation_editor = simulation_editor
@@ -605,6 +639,7 @@ class SLMMaskWidget(QWidget):
         print(f"M{mask_number}")
         self.masks_dict[
             f"resulting_M"] = self.result_mask
+        self.beam_shaper.result_mask = self.result_mask
 
         self.save_mask_button.setDisabled(False)
         self.save_crop_mask_button.setDisabled(False)
@@ -616,7 +651,7 @@ class SLMMaskWidget(QWidget):
     def new_mask(self):
         mask_number = len(self.masks_params_widgets) + 1
 
-        new_mask_params_widget = MaskParamsWidget(self.beam_shaper,mask_number)
+        new_mask_params_widget = MaskParamsWidget(self.beam_shaper,mask_number,self.logger)
 
         self.masks_params_widgets.append(new_mask_params_widget)
         self.mask_layout.addWidget(new_mask_params_widget)
