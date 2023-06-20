@@ -564,6 +564,11 @@ class SLMMaskWidget(QWidget):
 
 
     def evaluate_operation(self):
+
+        self.logger.info( "=" * 30)
+        self.logger.info("  Generate SLM mask")
+        self.logger.info("=" * 30 )
+
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
 
@@ -590,7 +595,7 @@ class SLMMaskWidget(QWidget):
                     float(part)
                 except ValueError:
                     # If it can't be converted to a float, it's invalid
-                    print(f"Invalid operation: {part}")
+                    self.logger.error(f"  Evaluate operation : Invalid operation: {part}.. ✘")
                     return
 
         # Replace mask names with their numpy array representation
@@ -606,8 +611,14 @@ class SLMMaskWidget(QWidget):
             if len(self.result_display_widget) > len(self.masks_params_widgets):
                 self.result_display_widget.removeTab(self.result_display_widget.count()-1)
         except:
-            print('no')
+
             pass
+
+
+        if self.masks_dict["M1"] == "":
+
+            self.logger.info(f"  Evaluate operation : M1 mask == None Type.. ✘")
+            return
 
         # Initialize the resulting mask as an empty mask
         self.result_mask = np.zeros_like(next(iter(self.masks_dict.values())))
@@ -618,12 +629,15 @@ class SLMMaskWidget(QWidget):
                 self.result_mask = eval(operation)
                 self.beam_shaper.mask = self.result_mask
             except Exception as e:
-                print(f"Error evaluating operation: {e}")
+                self.logger.error(f"  Evaluate operation : Error evaluating operation: {e}... ✘")
+
                 return
 
         if operation == "" and len(self.masks_dict) >0:
             self.result_mask = self.masks_dict["M1"]
             self.beam_shaper.mask = self.result_mask
+            self.logger.info(f"  Evaluate operation : No operation to evaluate.. ✘")
+            self.logger.info(f"  Evaluate operation : Using M1 as default result mask.. ✔")
 
         if self.discretize_checkbox.isChecked():
             self.result_mask = discretize_array(self.result_mask)
