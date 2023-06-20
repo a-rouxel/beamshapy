@@ -659,7 +659,7 @@ class TargetFieldDesignWidget(QWidget):
         # print(len(self.target_amplitude_params_widgets),len(self.result_display_widget))
         if len(self.target_amplitude_params_widgets) == len(self.result_display_widget)  - 1:
             self.result_display_widget.addTab(inverse_fourier_transform_display, f"Inverse Fourier Transform")
-
+        self.inverse_fourier_transform = inverse_fourier_transform
 
     def new_target_amplitude(self):
         target_amplitude_number = len(self.target_amplitude_params_widgets) + 1
@@ -693,27 +693,43 @@ class TargetFieldDesignWidget(QWidget):
             # Remove the last mask from the dictionary of masks
             target_amplitude_number = len(self.target_amplitude_params_widgets)
 
-            try :
-                self.target_amplitudes_dict["resulting_A"]
+            try:
+                self.inverse_fourier_transform
                 del self.target_amplitudes_dict[f"A{target_amplitude_number}"]
-                mask_to_remove = self.target_amplitude_params_widgets.pop()
-                self.target_amplitude_layout.removeWidget(mask_to_remove)
-                mask_to_remove.deleteLater()
+                amplitude_to_remove = self.target_amplitude_params_widgets.pop()
+                self.target_amplitude_layout.removeWidget(amplitude_to_remove)
+                amplitude_to_remove.deleteLater()
                 # Remove the last tab from result_display_widget
-                self.result_display_widget.removeTab(self.result_display_widget.count() - 2)
+                self.result_display_widget.removeTab(self.result_display_widget.count() - 3)
 
-                if len(self.target_amplitude_params_widgets)==0:
+                if len(self.target_amplitude_params_widgets) == 0:
+                    self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
                     self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
                     del self.target_amplitudes_dict["resulting_A"]
 
-            except KeyError:
-                del self.target_amplitudes_dict[f"A{target_amplitude_number}"]
-                # Remove the last mask widget from the target_amplitude_layout and the list
-                mask_to_remove = self.target_amplitude_params_widgets.pop()
-                self.target_amplitude_layout.removeWidget(mask_to_remove)
-                mask_to_remove.deleteLater()
-                # Remove the last tab from result_display_widget
-                self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
+            except :
+        
+                try :
+                    self.target_amplitudes_dict["resulting_A"]
+                    del self.target_amplitudes_dict[f"A{target_amplitude_number}"]
+                    amplitude_to_remove = self.target_amplitude_params_widgets.pop()
+                    self.target_amplitude_layout.removeWidget(amplitude_to_remove)
+                    amplitude_to_remove.deleteLater()
+                    # Remove the last tab from result_display_widget
+                    self.result_display_widget.removeTab(self.result_display_widget.count() - 2)
+    
+                    if len(self.target_amplitude_params_widgets)==0:
+                        self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
+                        del self.target_amplitudes_dict["resulting_A"]
+    
+                except KeyError:
+                    del self.target_amplitudes_dict[f"A{target_amplitude_number}"]
+                    # Remove the last mask widget from the target_amplitude_layout and the list
+                    amplitude_to_remove = self.target_amplitude_params_widgets.pop()
+                    self.target_amplitude_layout.removeWidget(amplitude_to_remove)
+                    amplitude_to_remove.deleteLater()
+                    # Remove the last tab from result_display_widget
+                    self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
 
 
 
