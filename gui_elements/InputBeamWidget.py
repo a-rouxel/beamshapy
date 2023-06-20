@@ -187,7 +187,7 @@ class InputBeamWidget(QWidget):
     def run_beam_generation(self):
         # Get the configs from the editors
         self.logger.info( "=" * 30)
-        self.logger.info("  INPUT FIELD GENERATION")
+        self.logger.info("  Input Field Generation")
         self.logger.info("=" * 30 )
         self.logger.info("  Step 1: Updating input beam config... ✔")
         self.input_beam_editor.get_config()

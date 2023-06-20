@@ -247,7 +247,25 @@ def save_target_amplitude(target_amplitude, results_directory):
     with h5py.File(file_path, 'w') as f:
         f.create_dataset('mask', data=target_amplitude)
 
-    print("Amplitude data saved !")
+
+def save_inverse_fourier_field(beam_shaper,inverse_fourier_field, results_directory):
+        # Calculate the other two arrays
+        intensity = np.abs(inverse_fourier_field.field) ** 2
+        phase = np.angle(inverse_fourier_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'inverse_fourier_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'inverse_fourier_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Output Field data saved !")
+
 
 def crop_center(array_x, nb_of_samples_along_x, nb_of_samples_along_y):
     y_len, x_len = array_x.shape

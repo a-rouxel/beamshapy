@@ -39,6 +39,7 @@ class BeamShaper():
             raise ValueError("Unknown field type")
 
         self.input_beam = F
+        self.power = np.sum(np.sum(Intensity(self.input_beam)))
 
         return F
 
@@ -71,7 +72,7 @@ class BeamShaper():
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
 
-    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
+    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
 
 
         if self.x_array_in is None:
@@ -91,6 +92,20 @@ class BeamShaper():
             mask_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
             mask = mask_x + mask_y
 
+            return mask
+
+        if mask_type == "ϕ target field":
+            target_field = self.inverse_fourier_target_field
+            mask = self.get_field_phase(target_field)
+            return mask
+
+        if mask_type == "modulation amplitude":
+            normalized_target_field = self.normalize_both_field_intensity(self.inverse_fourier_target_field)
+            target_abs_amplitude = np.sqrt(Intensity(normalized_target_field)) * amplitude_factor
+            input_abs_amplitude = np.sqrt(Intensity(self.input_beam))
+            print("input amplitude",np.max(input_abs_amplitude))
+            print("target amplitude",np.max(target_abs_amplitude))
+            mask = WeightsMask(input_abs_amplitude,target_abs_amplitude,threshold)
             return mask
 
         if mask_type == "Rect Amplitude":
@@ -192,8 +207,25 @@ class BeamShaper():
 
         return self.inverse_fourier_target_field
 
+    def get_field_phase(self,field):
+        return Phase(field)
 
+    def get_field_intensity(self,field):
+        return Intensity(field)
+    def normalize_field_by_input_power(self,field):
+        field_power = np.sum(np.sum(Intensity(field)))
+        normalized_intensity = Intensity(field) * self.power / field_power
+        normalized_field = SubIntensity(field,normalized_intensity)
+        return normalized_field
 
+    def normalize_both_field_intensity(self,field):
+        max_input_value = Intensity(self.input_beam).max()
+        print(max_input_value)
+        max_target_value = Intensity(field).max()
+        print(max_target_value)
+        normalized_field = SubIntensity(field,Intensity(field)*max_input_value/max_target_value)
+
+        return normalized_field
     def phase_modulate_input_beam(self,mask):
         self.modulated_input_beam = MultPhase(self.input_beam,mask)
         return self.modulated_input_beam

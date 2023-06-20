@@ -10,7 +10,7 @@ import numpy as np
 from LightPipes import mm, Field, Intensity, Phase
 import os
 import re
-from utils import save_target_amplitude, normalize, discretize_array, translate
+from utils import save_target_amplitude, save_inverse_fourier_field,normalize, discretize_array, translate
 import numpy as np
 import matplotlib as plt
 
@@ -31,6 +31,11 @@ class DisplayInverseFourierTargetField(QWidget):
         self.PhaseCanvas= FigureCanvas(self.PhaseFigure)
         self.PhaseToolbar = NavigationToolbar(self.PhaseCanvas, self)
 
+        # Create figures and figure canvases for the plots
+        self.ComparisonInputFieldFigure = Figure()
+        self.ComparisonInputFieldCanvas = FigureCanvas(self.ComparisonInputFieldFigure)
+        self.ComparisonInputFieldToolbar = NavigationToolbar(self.ComparisonInputFieldCanvas, self)
+
 
         # Create Widgets for each tab to hold the toolbar and the figure canvas
         self.IntensityWidget = QWidget()
@@ -44,17 +49,23 @@ class DisplayInverseFourierTargetField(QWidget):
         self.PhaseLayout.addWidget(self.PhaseToolbar)
         self.PhaseLayout.addWidget(self.PhaseCanvas)
 
+        # Create Widgets for each tab to hold the toolbar and the figure canvas
+        self.ComparisonInputFieldWidget = QWidget()
+        self.ComparisonInputFieldLayout = QVBoxLayout(self.ComparisonInputFieldWidget)
+        self.ComparisonInputFieldLayout.addWidget(self.ComparisonInputFieldToolbar)
+        self.ComparisonInputFieldLayout.addWidget(self.ComparisonInputFieldCanvas)
+
 
         # Add the Widgets to the tab widget
         self.tabWidget.addTab(self.IntensityWidget, "Intensity Map")
         self.tabWidget.addTab(self.PhaseWidget, "Phase Map")
+        self.tabWidget.addTab(self.ComparisonInputFieldWidget, "Comparison Input Field")
 
         # Create a QVBoxLayout and add the tab widget to it
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabWidget)
 
-    @pyqtSlot(np.ndarray,np.ndarray)
-    def display_fourier_transform_target_field(self, x_array, field):
+    def display_fourier_transform_target_field(self, x_array, field,input_field):
         # Plot the mask
         self.x_array_in = x_array/mm
 
@@ -78,22 +89,42 @@ class DisplayInverseFourierTargetField(QWidget):
         self.PhaseFigure.colorbar(im, ax=ax1,label='Phase values [in rad]')
         self.PhaseCanvas.draw()
 
+        intensity_target_field = intensity_field
+        intensity_input_field =Intensity(input_field)
+        self.ComparisonInputFieldFigure.clear()
+        ax1 = self.ComparisonInputFieldFigure.add_subplot(111)
+        ax1.plot(self.x_array_in, intensity_target_field[intensity_target_field.shape[0]//2,:],label='Intensity Target')
+        ax1.plot(self.x_array_in, intensity_input_field[intensity_input_field.shape[0]//2,:],label='Intensity Input')
+        ax1.set_title('Comparison of Target and Input Intensity Field')
+        ax1.set_xlabel('Position along X [in mm]')
+        ax1.set_ylabel('Intensity values [no units]')
+        ax1.legend()
+        self.ComparisonInputFieldCanvas.draw()
+
 
 
 
 class Worker(QThread):
-    finished_calculation_inverse_fourier_transform = pyqtSignal(np.ndarray,Field)
+    finished_calculation_inverse_fourier_transform = pyqtSignal(np.ndarray,Field,Field)
 
-    def __init__(self,beam_shaper,complex_amplitude):
+    def __init__(self,beam_shaper,complex_amplitude,logger):
         super().__init__()
+        self.logger = logger
         self.beam_shaper = beam_shaper
         self.complex_amplitude = complex_amplitude
 
     def run(self):
-        print("worker started")
 
+
+        input_field = self.beam_shaper.input_beam
         inverse_fourier_target_field = self.beam_shaper.inverse_fourier_transform(self.complex_amplitude)
-        self.finished_calculation_inverse_fourier_transform.emit(self.beam_shaper.x_array_in,inverse_fourier_target_field)
+        self.logger.info("  Step 1: generation of the inverse fourier transform... ✔")
+
+        inverse_fourier_target_field = self.beam_shaper.normalize_both_field_intensity(inverse_fourier_target_field)
+        self.logger.info("  Step 2: normalize the inverse fourier transform by max input field intensity value... ✔")
+
+
+        self.finished_calculation_inverse_fourier_transform.emit(self.beam_shaper.x_array_in,inverse_fourier_target_field,input_field)
 
         print("worker finished")
 
@@ -247,7 +278,7 @@ class TargetAmplitudeParamsWidget(QWidget):
             target_amplitude = self.beam_shaper.generate_target_amplitude(amplitude_type=target_amplitude_type,
                                            mask_path=file_path)
         else :
-            raise ValueError("Invalid amplitude type")
+            return
 
         if self.normalize_checkbox.isChecked():
             min_value = float(self.min_value_input.text())
@@ -453,15 +484,20 @@ class TargetFieldDesignWidget(QWidget):
         self.discretize_checkbox = QCheckBox("Discretize")
 
         # Add a button to evaluate the user input
-        self.evaluate_button = QPushButton("Generate final Amplitude", self)
+        self.evaluate_button = QPushButton("Generate Target Amplitude", self)
         self.evaluate_button.clicked.connect(self.evaluate_operation)
 
-        self.inverse_transform_button = QPushButton("Inverse Transform final Amplitude", self)
+        self.inverse_transform_button = QPushButton("Inverse Fourier Transform", self)
         self.inverse_transform_button.clicked.connect(self.run_inverse_fourier_transform)
+        self.is_resulting_amplitude_exist = False
 
-        self.save_target_amplitude_button = QPushButton("Save final Amplitude")
+        self.save_target_amplitude_button = QPushButton("Save Target Amplitude in Fourier plane")
         self.save_target_amplitude_button.setDisabled(True)
         self.save_target_amplitude_button.clicked.connect(self.on_resulting_target_amplitude_save)
+
+        self.save_inverse_fourier_transform_button = QPushButton("Save Inverse Fourier Transform Amplitude in SLM plane")
+        self.save_inverse_fourier_transform_button.setDisabled(True)
+        self.save_inverse_fourier_transform_button.clicked.connect(self.on_resulting_inverse_fourier_amplitude_save)
 
 
         # List to store references to the mask widgets
@@ -493,6 +529,7 @@ class TargetFieldDesignWidget(QWidget):
         # Create a QVBoxLayout for the save button and result display
         self.result_layout = QVBoxLayout()
         self.result_layout.addWidget(self.save_target_amplitude_button)
+        self.result_layout.addWidget(self.save_inverse_fourier_transform_button)
         self.result_layout.addWidget(self.result_display_widget)
 
         # Create a QHBoxLayout for the whole widget
@@ -528,9 +565,24 @@ class TargetFieldDesignWidget(QWidget):
         # Save the resulting mask
         save_target_amplitude(self.result_target_amplitude, results_directory)
 
+        self.logger.info(f"...Target Amplitude saved in {results_directory}")
         self.save_target_amplitude_button.setDisabled(True)
 
+    def on_resulting_inverse_fourier_amplitude_save(self):
+        self.simulation_name = self.infos_editor.config['simulation name']
+        self.results_directory = self.infos_editor.config['results directory']
+        results_directory = os.path.join(self.results_directory, self.simulation_name)
+        # Save the resulting mask
+        save_inverse_fourier_field(self.beam_shaper,self.inverse_fourier_transform, results_directory)
+
+        self.logger.info(f"...Inverse Fourier Transform Amplitude saved in {results_directory}")
+        self.save_inverse_fourier_transform_button.setDisabled(True)
+
     def run_inverse_fourier_transform(self):
+
+        self.logger.info( "=" * 30)
+        self.logger.info("  Inverse Fourier Transform of the target Field")
+        self.logger.info("=" * 30 )
 
         try:
             self.beam_shaper.input_beam
@@ -554,15 +606,18 @@ class TargetFieldDesignWidget(QWidget):
             msg.exec_()
             return
 
-        self.worker = Worker(self.beam_shaper, self.result_target_amplitude)
+        self.save_inverse_fourier_transform_button.setDisabled(False)
+
+        self.worker = Worker(self.beam_shaper, self.result_target_amplitude,self.logger)
         self.worker.finished_calculation_inverse_fourier_transform.connect(self.display_inverse_fourier_transform)
         self.worker.start()
 
 
-
-
-
     def evaluate_operation(self):
+
+        self.logger.info( "=" * 30)
+        self.logger.info("  Generate Target Amplitude")
+        self.logger.info("=" * 30 )
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
 
@@ -634,25 +689,29 @@ class TargetFieldDesignWidget(QWidget):
         result_display = DisplayWidget(self.beam_shaper)  # replace with your actual Display Widget here
         result_display.displaytarget_amplitude(self.result_target_amplitude,self.beam_shaper.x_array_in)  # Display the result mask
         # Add the result display as a new tab to the result_display_widget and store its index
+
         self.result_tab_index = self.result_display_widget.addTab(result_display, "Resulting Amplitude")
 
-        target_amplitude_number = len(self.target_amplitude_params_widgets) + 1
 
         self.target_amplitudes_dict[
             f"resulting_A"] = self.result_target_amplitude
 
         self.save_target_amplitude_button.setDisabled(False)
 
+        self.is_resulting_amplitude_exist = True
+
+        self.logger.info(" ... evaluation of the operation on target amplitudes  : complex amplitude generation  ✔")
+
     @pyqtSlot(np.ndarray, int)
     def update_target_amplitudes_dict(self, target_amplitude, target_amplitude_number):
         self.target_amplitudes_dict[f"A{target_amplitude_number}"] = target_amplitude
 
 
-    @pyqtSlot(np.ndarray, Field)
-    def display_inverse_fourier_transform(self, x_array_in,inverse_fourier_transform):
+    @pyqtSlot(np.ndarray, Field, Field)
+    def display_inverse_fourier_transform(self, x_array_in,inverse_fourier_transform,input_field):
         # Create a new widget for the display
         inverse_fourier_transform_display = DisplayInverseFourierTargetField()
-        inverse_fourier_transform_display.display_fourier_transform_target_field(x_array_in,inverse_fourier_transform)
+        inverse_fourier_transform_display.display_fourier_transform_target_field(x_array_in,inverse_fourier_transform,input_field)
 
         # Add the new display as a new tab to the result_display_widget
         #
