@@ -194,6 +194,19 @@ def RectangularAmplitudeMask(GridPositionMatrix_X, GridPositionMatrix_Y, angle, 
 
     return mask
 
+def SinusAmplitudeArray(GridPositionMatrix_X,GridPositionMatrix_Y,period,angle):
+
+    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
+    mask = np.sin(2 * np.pi * GridPositionMatrix_X_rot / period)
+    return mask
+
+
+def CosinusAmplitudeArray(GridPositionMatrix_X, GridPositionMatrix_Y, period, angle):
+    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
+
+    mask = np.cos(2 * np.pi * GridPositionMatrix_X_rot / period)
+    return mask
+
 def PiPhaseJumpMask(GridPositionMatrix_X, GridPositionMatrix_Y, orientation, position):
 
     mask = np.zeros(GridPositionMatrix_X.shape)

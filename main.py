@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDockWidget,QTextEdit
 from PyQt5.QtGui import QIcon
 from gui_elements import InputBeamWidget
+from gui_elements import TargetFieldDesignWidget
 from gui_elements import InputBeamEditorWidget
 from gui_elements import SimulationConfigEditorWidget
 from gui_elements import SLMMaskWidget
@@ -66,6 +67,15 @@ class MainWindow(QMainWindow):
         self.input_beam_dock.setWidget(self.input_beam_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.input_beam_dock)
 
+        self.target_amplitude_widget = TargetFieldDesignWidget(self.BeamShaper,
+                                                               self.infos_editor,
+                                                               self.simulation_editor,
+                                                               target_target_amplitude_config_path="config/target_amplitude.yml",
+                                                               logger=self.logger)
+        self.target_amplitude_dock = QDockWidget("Target Amplitude")
+        self.target_amplitude_dock.setWidget(self.target_amplitude_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.target_amplitude_dock)
+
         self.SLM_mask_widget = SLMMaskWidget(self.BeamShaper,
                                              self.infos_editor,
                                              self.simulation_editor,
@@ -82,7 +92,8 @@ class MainWindow(QMainWindow):
         self.fourier_plane_detection_dock.setWidget(self.fourier_plane_detection_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.fourier_plane_detection_dock)
 
-        self.tabifyDockWidget(self.input_beam_dock, self.SLM_mask_dock)
+        self.tabifyDockWidget(self.input_beam_dock, self.target_amplitude_dock)
+        self.tabifyDockWidget(self.target_amplitude_dock, self.SLM_mask_dock)
         self.tabifyDockWidget(self.SLM_mask_dock, self.fourier_plane_detection_dock)
 
         self.input_beam_dock.raise_()

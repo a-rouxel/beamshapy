@@ -235,6 +235,20 @@ def save_mask(mask, results_directory):
 
     print("Mask data saved !")
 
+def save_target_amplitude(target_amplitude, results_directory):
+    os.makedirs(results_directory, exist_ok=True)
+    # Save the arrays in an H5 file
+    counter = 0
+    file_path = results_directory
+    while os.path.exists(file_path):
+        counter += 1
+        file_path = os.path.join(results_directory, f'target_amplitude_{counter}.h5')
+
+    with h5py.File(file_path, 'w') as f:
+        f.create_dataset('mask', data=target_amplitude)
+
+    print("Amplitude data saved !")
+
 def crop_center(array_x, nb_of_samples_along_x, nb_of_samples_along_y):
     y_len, x_len = array_x.shape
 

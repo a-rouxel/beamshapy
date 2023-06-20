@@ -141,6 +141,58 @@ class BeamShaper():
                 print("mask_type not recognized")
             return mask
 
+    def generate_target_amplitude(self,amplitude_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None):
+        if self.x_array_in is None:
+            raise ValueError("Please generate Input Beam first")
+
+        if amplitude_type == "Rectangle":
+            amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
+            return amplitude
+
+        if amplitude_type == "Sinus":
+            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            return amplitude
+
+        if amplitude_type == "Cosinus":
+            amplitude = CosinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            return amplitude
+
+        if amplitude_type == "Custom h5 Amplitude":
+            if amplitude_path is None:
+                raise ValueError("Please provide h5 file path for custom mask.")
+
+            with h5py.File(amplitude_path, 'r') as f:
+                mask = f['mask'][:]
+
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            if mask.shape != self.GridPositionMatrix_X.shape:
+                new_mask = np.zeros_like(self.GridPositionMatrix_X)
+                x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
+                y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
+                new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
+                mask = new_mask
+
+            else:
+                print("mask_type not recognized")
+            return mask
+
+    def inverse_fourier_transform(self,complex_amplitude):
+
+        # check if complex amplitude has same dimensions as GridPositionMatrix
+        if complex_amplitude.shape != self.GridPositionMatrix_X.shape:
+            raise ValueError("Complex amplitude must have same dimensions as GridPositionMatrix")
+
+
+        self.target_field = SubIntensity(self.input_beam,np.abs(complex_amplitude)**2)
+        self.target_field = SubPhase(self.target_field,np.angle(complex_amplitude))
+
+
+        self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
+
+        return self.inverse_fourier_target_field
+
+
 
     def phase_modulate_input_beam(self,mask):
         self.modulated_input_beam = MultPhase(self.input_beam,mask)
