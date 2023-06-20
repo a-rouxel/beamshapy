@@ -11,9 +11,9 @@ from LightPipes import Field, Phase, Intensity
 
 
 class InputBeamEditorWidget(QWidget):
-    def __init__(self,initial_input_beam_config_path=None):
+    def __init__(self,initial_input_beam_config_path=None,logger=None):
         super().__init__()
-
+        self.logger = logger
         self.initial_config_file = initial_input_beam_config_path
 
 
@@ -92,6 +92,7 @@ class InputBeamEditorWidget(QWidget):
         }
 
         self.config = config
+
         return config
 
     def update_config(self):

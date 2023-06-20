@@ -10,9 +10,10 @@ from LightPipes import Field, Phase, Intensity
 
 class SimulationConfigEditorWidget(QWidget):
     sampling_generated = pyqtSignal(int)
-    def __init__(self, simulation_config_path=None):
-        super().__init__()
+    def __init__(self, simulation_config_path=None,logger=None):
 
+        super().__init__()
+        self.logger = logger
         self.initial_config_file = simulation_config_path
 
         # Create a QScrollArea

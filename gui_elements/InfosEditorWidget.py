@@ -10,9 +10,9 @@ import numpy as np
 from LightPipes import Field, Phase, Intensity
 
 class InfosEditorWidget(QWidget):
-    def __init__(self, initial_infos_config_path=None):
+    def __init__(self, initial_infos_config_path=None,logger=None):
         super().__init__()
-
+        self.logger = logger
         self.initial_config_file = initial_infos_config_path
 
         # Create a QScrollArea

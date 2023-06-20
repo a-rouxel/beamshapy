@@ -10,6 +10,21 @@ from gui_elements import InfosEditorWidget
 from gui_elements import FourierPlaneDetectionWidget
 from BeamShaper import BeamShaper
 
+import logging
+from PyQt5.QtWidgets import QTextEdit
+
+class QTextEditLogger(logging.Handler):
+    def __init__(self, parent):
+        super().__init__()
+        self.widget = QTextEdit(parent)
+        self.widget.setReadOnly(True)
+        # Set the background color to black and text color to white
+        self.widget.setStyleSheet("QTextEdit { background-color: #000; color: #FFF; }")
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.append(msg)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -17,11 +32,25 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon('logo_beam_shaper.png'))  # Uncomment this line
         self.setWindowTitle('Beam Shaping FFT')
 
+        # Create a QTextEditLogger
+        logTextBox = QTextEditLogger(self)
+        # You might want to format what is printed to QTextEdit
+        logTextBox.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s •  %(message)s', "%Y-%m-%d %H:%M:%S"))
+        handler = logTextBox
 
 
-        self.infos_editor = InfosEditorWidget(initial_infos_config_path="config/infos.yml")
-        self.input_beam_editor = InputBeamEditorWidget(initial_input_beam_config_path="config/input_beam.yml")
-        self.simulation_editor = SimulationConfigEditorWidget(simulation_config_path="config/simulation.yml")
+        # Create a logger for this MainWindow
+        self.logger = logging.getLogger(type(self).__name__)
+        self.logger.addHandler(handler)
+
+        # You can control the logging level
+        self.logger.setLevel(logging.INFO)
+
+
+        self.infos_editor = InfosEditorWidget(initial_infos_config_path="config/infos.yml",logger=self.logger)
+        self.input_beam_editor = InputBeamEditorWidget(initial_input_beam_config_path="config/input_beam.yml",logger=self.logger)
+        self.simulation_editor = SimulationConfigEditorWidget(simulation_config_path="config/simulation.yml",logger=self.logger)
+
 
         self.BeamShaper = BeamShaper(self.simulation_editor.get_config(),
                                     self.input_beam_editor.get_config(),
@@ -30,7 +59,7 @@ class MainWindow(QMainWindow):
         self.input_beam_widget = InputBeamWidget(self.BeamShaper,
                                                  self.infos_editor,
                                                  self.simulation_editor,
-                                                 self.input_beam_editor)
+                                                 self.input_beam_editor,logger=self.logger)
         self.input_beam_dock = QDockWidget("Input Beam")
         self.input_beam_dock.setWidget(self.input_beam_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.input_beam_dock)
@@ -55,6 +84,15 @@ class MainWindow(QMainWindow):
         self.tabifyDockWidget(self.SLM_mask_dock, self.fourier_plane_detection_dock)
 
         self.input_beam_dock.raise_()
+
+        # Add the new logging box widget to the layout
+        self.log_dock = QDockWidget("Log Messages")
+        self.log_dock.setWidget(logTextBox.widget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.log_dock)
+        self.setGeometry(100, 100, 1000, 900)
+
+        # Use self.logger to log messages
+
         #
         # # Load and apply the stylesheet
         # with open("./Ubuntu.qss", "r") as file:

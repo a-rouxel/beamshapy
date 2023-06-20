@@ -85,8 +85,9 @@ class InputBeamPhaseDisplay(QWidget):
 class Worker(QThread):
     finished_generate_input_beam = pyqtSignal(Field)
 
-    def __init__(self, input_beam_editor,simulation_editor,beam_shaper):
+    def __init__(self, input_beam_editor,simulation_editor,beam_shaper,logger=None):
         super().__init__()
+        self.logger = logger
         self.input_beam_config = input_beam_editor.config
         self.simulation_editor = simulation_editor
         self.simulation_config = simulation_editor.config
@@ -96,15 +97,19 @@ class Worker(QThread):
         # Put your analysis here
 
         self.beam_shaper.generate_sampling(self.simulation_config,self.input_beam_config)
+        self.logger.info("  Step 3: Beam shaper - generating input field & fourier field sampling... ✔")
         self.simulation_editor.update_nb_of_samples(self.beam_shaper.nb_of_samples)
         input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
+        self.logger.info("  Step 4: Beam shaper - generating input field arrays ... ✔")
         self.finished_generate_input_beam.emit(input_field)
 
 
 
 class InputBeamWidget(QWidget):
-    def __init__(self, beam_shaper, infos_editor,simulation_editor,input_beam_editor):
+    def __init__(self, beam_shaper, infos_editor,simulation_editor,input_beam_editor,logger=None):
         super().__init__()
+
+        self.logger = logger
 
         # Create the dimensioning configuration editor
         self.beam_shaper = beam_shaper
@@ -192,10 +197,16 @@ class InputBeamWidget(QWidget):
 
     def run_beam_generation(self):
         # Get the configs from the editors
+        self.logger.info( "=" * 30)
+        self.logger.info("  INPUT FIELD GENERATION")
+        self.logger.info("=" * 30 )
+        self.logger.info("  Step 1: Updating input beam config... ✔")
         self.input_beam_editor.get_config()
+        self.logger.info("  Step 2: Updating simulation config... ✔")
         self.simulation_editor.get_config()
 
-        self.worker = Worker(self.input_beam_editor, self.simulation_editor, self.beam_shaper)
+        # Create the worker and connect the signals
+        self.worker = Worker(self.input_beam_editor, self.simulation_editor, self.beam_shaper,self.logger)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_intensity)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_phase)
         self.worker.start()

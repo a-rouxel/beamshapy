@@ -70,6 +70,7 @@ class BeamShaper():
         self.GridPositionMatrix_X = GridPositionMatrix_X
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
+
     def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
 
 
