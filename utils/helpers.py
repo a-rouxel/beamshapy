@@ -235,6 +235,38 @@ def save_mask(mask, results_directory):
 
     print("Mask data saved !")
 
+def save_target_amplitude(target_amplitude, results_directory):
+    os.makedirs(results_directory, exist_ok=True)
+    # Save the arrays in an H5 file
+    counter = 0
+    file_path = results_directory
+    while os.path.exists(file_path):
+        counter += 1
+        file_path = os.path.join(results_directory, f'target_amplitude_{counter}.h5')
+
+    with h5py.File(file_path, 'w') as f:
+        f.create_dataset('mask', data=target_amplitude)
+
+
+def save_inverse_fourier_field(beam_shaper,inverse_fourier_field, results_directory):
+        # Calculate the other two arrays
+        intensity = np.abs(inverse_fourier_field.field) ** 2
+        phase = np.angle(inverse_fourier_field.field)
+        # Save the arrays in an H5 file
+        file_path = os.path.join(results_directory, 'inverse_fourier_field.h5')
+        counter = 0
+        while os.path.exists(f'{file_path}'):
+            counter += 1
+            file_path = os.path.join(results_directory, f'inverse_fourier_field{counter}.h5')
+
+        with h5py.File(file_path, 'w') as f:
+            f.create_dataset('intensity', data=intensity)
+            f.create_dataset('phase', data=phase)
+            f.create_dataset('x_vector_mm', data=beam_shaper.x_array_out / mm)
+
+        print("Output Field data saved !")
+
+
 def crop_center(array_x, nb_of_samples_along_x, nb_of_samples_along_y):
     y_len, x_len = array_x.shape
 
@@ -319,3 +351,58 @@ def find_nearest_index(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx
+
+def downsample(array, downsample_factor):
+    """
+    Downsamples a 2D numpy array by averaging over blocks of size `downsample_factor`.
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Input 2D array to downsample.
+    downsample_factor : int
+        Downsampling factor. The size of the input array should be divisible by this factor.
+
+    Returns
+    -------
+    numpy.ndarray
+        Downsampled array.
+    """
+    if not array.shape[0] % downsample_factor == 0 or not array.shape[1] % downsample_factor == 0:
+        raise ValueError("Both dimensions of the input array must be divisible by the downsample factor.")
+
+    # Reshape to a higher dimensional array
+    reshaped = array.reshape((array.shape[0] // downsample_factor, downsample_factor,
+                              array.shape[1] // downsample_factor, downsample_factor))
+
+    # Take the mean over the extra dimensions
+    downsampled = reshaped.mean(axis=1).mean(axis=-1)
+
+    return downsampled
+
+def downsample_1d(array, downsample_factor):
+    """
+    Downsamples a 1D numpy array by averaging over blocks of size `downsample_factor`.
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Input 1D array to downsample.
+    downsample_factor : int
+        Downsampling factor. The size of the input array should be divisible by this factor.
+
+    Returns
+    -------
+    numpy.ndarray
+        Downsampled array.
+    """
+    if not len(array) % downsample_factor == 0:
+        raise ValueError("The size of the input array must be divisible by the downsample factor.")
+
+    # Reshape to a higher dimensional array
+    reshaped = array.reshape((len(array) // downsample_factor, downsample_factor))
+
+    # Take the mean over the extra dimension
+    downsampled = reshaped.mean(axis=1)
+
+    return downsampled

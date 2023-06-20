@@ -2,22 +2,11 @@ from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
                              QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
                              QVBoxLayout, QCheckBox, QSpinBox, QWidget)
 from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
-import yaml
-import pyqtgraph as pg
-from pyqtgraph import ImageView
-import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import matplotlib.pyplot as plt
 from LightPipes import Field, Phase, Intensity
-# from InputBeamEditorWidget import InputBeamEditorWidget
-# from SimulationConfigEditorWidget import SimulationConfigEditorWidget
 from utils import *
-import h5py
-import matplotlib.figure as mpl_fig
-import matplotlib.backends.backend_qt5agg as mpl_backend
-import numpy as np
-from LightPipes import mm
+
 
 class InputBeamIntensityDisplay(QWidget):
     def __init__(self):
@@ -84,9 +73,11 @@ class InputBeamPhaseDisplay(QWidget):
 
 class Worker(QThread):
     finished_generate_input_beam = pyqtSignal(Field)
+    finished_generate_sampling = pyqtSignal(bool)
 
-    def __init__(self, input_beam_editor,simulation_editor,beam_shaper):
+    def __init__(self, input_beam_editor,simulation_editor,beam_shaper,logger=None):
         super().__init__()
+        self.logger = logger
         self.input_beam_config = input_beam_editor.config
         self.simulation_editor = simulation_editor
         self.simulation_config = simulation_editor.config
@@ -95,7 +86,8 @@ class Worker(QThread):
     def run(self):
         # Put your analysis here
 
-        self.beam_shaper.generate_sampling()
+        self.beam_shaper.generate_sampling(self.simulation_config,self.input_beam_config)
+        self.finished_generate_sampling.emit(True)
         self.simulation_editor.update_nb_of_samples(self.beam_shaper.nb_of_samples)
         input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
         self.finished_generate_input_beam.emit(input_field)
@@ -103,8 +95,10 @@ class Worker(QThread):
 
 
 class InputBeamWidget(QWidget):
-    def __init__(self, beam_shaper, infos_editor,simulation_editor,input_beam_editor):
+    def __init__(self, beam_shaper, infos_editor,simulation_editor,input_beam_editor,logger=None):
         super().__init__()
+
+        self.logger = logger
 
         # Create the dimensioning configuration editor
         self.beam_shaper = beam_shaper
@@ -132,17 +126,33 @@ class InputBeamWidget(QWidget):
         self.save_input_beam_button.setDisabled(True)
         self.save_input_beam_button.clicked.connect(self.on_input_beam_saved)
 
+
+        self.downsampling_horizontal_layout = QHBoxLayout()
+        # Create checkbox for downsampling
+        self.downsampling_checkbox = QCheckBox("Downsample for display")
+        self.downsampling_checkbox.setChecked(True)
+
+        # Create a QLineEdit for downsampling factor
+        self.downsampling_factor_edit = QLineEdit()
+        self.downsampling_factor_edit.setText("4")
+        self.downsampling_factor_edit.setDisabled(True)
+        # Enable/Disable QLineEdit depending on the state of the checkbox
+        self.downsampling_checkbox.stateChanged.connect(self.enable_disable_factor_edit)
+
+        self.downsampling_horizontal_layout.addWidget(self.downsampling_checkbox)
+        self.downsampling_horizontal_layout.addWidget(self.downsampling_factor_edit)
+
         # Create a group box for the run button
         self.run_button_group_box = QGroupBox()
         run_button_group_layout = QVBoxLayout()
         run_button_group_layout.addWidget(self.run_button)
         run_button_group_layout.addWidget(self.save_input_beam_button)
+        # Add the checkbox and QLineEdit to the layout
+        run_button_group_layout.addLayout(self.downsampling_horizontal_layout)
         run_button_group_layout.addWidget(self.result_display_widget)
         self.run_button_group_box.setLayout(run_button_group_layout)
-
         # Create a QVBoxLayout for the editors
         self.editor_layout = QVBoxLayout()
-
         self.editor_layout.addWidget(self.infos_editor)
         self.editor_layout.addWidget(self.simulation_editor)
         self.editor_layout.addWidget(self.input_beam_editor)
@@ -168,26 +178,63 @@ class InputBeamWidget(QWidget):
 
         self.save_input_beam_button.setDisabled(True)
 
+    def enable_disable_factor_edit(self, state):
+        if state == Qt.Checked:
+            self.downsampling_factor_edit.setDisabled(False)
+        else:
+            self.downsampling_factor_edit.setDisabled(True)
+
     def run_beam_generation(self):
         # Get the configs from the editors
+        self.logger.info( "=" * 30)
+        self.logger.info("  Input Field Generation")
+        self.logger.info("=" * 30 )
+        self.logger.info("  Step 1: Updating input beam config... ✔")
         self.input_beam_editor.get_config()
+        self.logger.info("  Step 2: Updating simulation config... ✔")
         self.simulation_editor.get_config()
 
-        self.worker = Worker(self.input_beam_editor,self.simulation_editor, self.beam_shaper)
+        # Create the worker and connect the signals
+        self.worker = Worker(self.input_beam_editor, self.simulation_editor, self.beam_shaper,self.logger)
+        self.worker.finished_generate_sampling.connect(self.state_beam_shaper_sampling_generated)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_intensity)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_phase)
         self.worker.start()
 
+    @pyqtSlot(bool)
+    def state_beam_shaper_sampling_generated(self, state):
+        if state:
+            self.logger.info("  Step 3: Beam shaper - generating input & fourier fields sampling... ✔")
+
+
     @pyqtSlot(Field)
     def display_input_beam_intensity(self, input_beam):
-        print("Displaying input beam intensity")
+        self.logger.info("  Step 4: Beam shaper - LightPipes - generating input field arrays ... ✔")
+
         self.save_input_beam_button.setDisabled(False)
         self.last_generated_beam_field = input_beam
-        self.input_beam_intensity_display.display_input_beam_intensity(Intensity(input_beam),self.simulation_editor.config['grid size'], self.simulation_editor.config['grid size'])
+
+        # Check if downsampling is enabled and get the factor
+        if self.downsampling_checkbox.isChecked():
+            downsample_factor = int(self.downsampling_factor_edit.text())
+            intensity_input_beam = downsample(Intensity(input_beam), downsample_factor)
+        else:
+            intensity_input_beam = Intensity(input_beam)
+
+        self.input_beam_intensity_display.display_input_beam_intensity(intensity_input_beam, self.simulation_editor.config['grid size'], self.simulation_editor.config['grid size'])
 
     @pyqtSlot(Field)
     def display_input_beam_phase(self, input_beam):
-        self.input_beam_phase_display.display_input_beam_phase(Phase(input_beam), self.simulation_editor.config['grid size'], self.simulation_editor.config['grid size'])
+
+
+        # Check if downsampling is enabled and get the factor
+        if self.downsampling_checkbox.isChecked():
+            downsample_factor = int(self.downsampling_factor_edit.text())
+            phase_input_beam = downsample(Phase(input_beam), downsample_factor)
+        else:
+            phase_input_beam = Phase(input_beam)
+
+        self.input_beam_phase_display.display_input_beam_phase(phase_input_beam, self.simulation_editor.config['grid size'], self.simulation_editor.config['grid size'])
 
     def load_simulation_config(self, file_name):
         with open(file_name, 'r') as file:

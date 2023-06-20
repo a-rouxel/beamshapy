@@ -13,7 +13,7 @@ class BeamShaper():
         if self.initial_config_file is not None:
             self.load_config(self.initial_config_file)
 
-        self.generate_sampling()
+        self.generate_sampling(simulation_config,input_beam_config)
 
     def generate_input_beam(self,input_beam_config):
 
@@ -39,12 +39,11 @@ class BeamShaper():
             raise ValueError("Unknown field type")
 
         self.input_beam = F
+        self.power = np.sum(np.sum(Intensity(self.input_beam)))
 
         return F
 
-    def generate_sampling(self):
-        simulation_config = self.simulation_config
-        input_beam_config = self.input_beam_config
+    def generate_sampling(self,simulation_config,input_beam_config):
 
         self.input_grid_size = simulation_config["grid size"]*mm
         self.input_grid_sampling = simulation_config["grid sampling"] *um
@@ -72,7 +71,8 @@ class BeamShaper():
         self.GridPositionMatrix_X = GridPositionMatrix_X
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
-    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None):
+
+    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
 
 
         if self.x_array_in is None:
@@ -92,6 +92,20 @@ class BeamShaper():
             mask_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
             mask = mask_x + mask_y
 
+            return mask
+
+        if mask_type == "ϕ target field":
+            target_field = self.inverse_fourier_target_field
+            mask = self.get_field_phase(target_field)
+            return mask
+
+        if mask_type == "modulation amplitude":
+            normalized_target_field = self.normalize_both_field_intensity(self.inverse_fourier_target_field)
+            target_abs_amplitude = np.sqrt(Intensity(normalized_target_field)) * amplitude_factor
+            input_abs_amplitude = np.sqrt(Intensity(self.input_beam))
+            print("input amplitude",np.max(input_abs_amplitude))
+            print("target amplitude",np.max(target_abs_amplitude))
+            mask = WeightsMask(input_abs_amplitude,target_abs_amplitude,threshold)
             return mask
 
         if mask_type == "Rect Amplitude":
@@ -142,7 +156,76 @@ class BeamShaper():
                 print("mask_type not recognized")
             return mask
 
+    def generate_target_amplitude(self,amplitude_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None):
+        if self.x_array_in is None:
+            raise ValueError("Please generate Input Beam first")
 
+        if amplitude_type == "Rectangle":
+            amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
+            return amplitude
+
+        if amplitude_type == "Sinus":
+            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            return amplitude
+
+        if amplitude_type == "Cosinus":
+            amplitude = CosinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            return amplitude
+
+        if amplitude_type == "Custom h5 Amplitude":
+            if amplitude_path is None:
+                raise ValueError("Please provide h5 file path for custom mask.")
+
+            with h5py.File(amplitude_path, 'r') as f:
+                mask = f['mask'][:]
+
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            if mask.shape != self.GridPositionMatrix_X.shape:
+                new_mask = np.zeros_like(self.GridPositionMatrix_X)
+                x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
+                y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
+                new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
+                mask = new_mask
+
+            else:
+                print("mask_type not recognized")
+            return mask
+
+    def inverse_fourier_transform(self,complex_amplitude):
+
+        # check if complex amplitude has same dimensions as GridPositionMatrix
+        if complex_amplitude.shape != self.GridPositionMatrix_X.shape:
+            raise ValueError("Complex amplitude must have same dimensions as GridPositionMatrix")
+
+
+        self.target_field = SubIntensity(self.input_beam,np.abs(complex_amplitude)**2)
+        self.target_field = SubPhase(self.target_field,np.angle(complex_amplitude))
+
+
+        self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
+
+        return self.inverse_fourier_target_field
+
+    def get_field_phase(self,field):
+        return Phase(field)
+
+    def get_field_intensity(self,field):
+        return Intensity(field)
+    def normalize_field_by_input_power(self,field):
+        field_power = np.sum(np.sum(Intensity(field)))
+        normalized_intensity = Intensity(field) * self.power / field_power
+        normalized_field = SubIntensity(field,normalized_intensity)
+        return normalized_field
+
+    def normalize_both_field_intensity(self,field):
+        max_input_value = Intensity(self.input_beam).max()
+        print(max_input_value)
+        max_target_value = Intensity(field).max()
+        print(max_target_value)
+        normalized_field = SubIntensity(field,Intensity(field)*max_input_value/max_target_value)
+
+        return normalized_field
     def phase_modulate_input_beam(self,mask):
         self.modulated_input_beam = MultPhase(self.input_beam,mask)
         return self.modulated_input_beam

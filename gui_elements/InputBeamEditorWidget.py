@@ -1,19 +1,14 @@
-from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
-                             QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
+from PyQt5.QtWidgets import (QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
                              QVBoxLayout, QCheckBox, QSpinBox, QWidget)
-from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
 import yaml
-import pyqtgraph as pg
-import numpy as np
 
-from LightPipes import Field, Phase, Intensity
 
 
 
 class InputBeamEditorWidget(QWidget):
-    def __init__(self,initial_input_beam_config_path=None):
+    def __init__(self,initial_input_beam_config_path=None,logger=None):
         super().__init__()
-
+        self.logger = logger
         self.initial_config_file = initial_input_beam_config_path
 
 
@@ -73,23 +68,6 @@ class InputBeamEditorWidget(QWidget):
         if self.initial_config_file is not None:
             self.load_config(self.initial_config_file)
 
-    def save_config(self):
-        if hasattr(self, 'config'):
-            options = QFileDialog.Options()
-            file_name, _ = QFileDialog.getSaveFileName(self, "Save Config", "",
-                                                       "YAML Files (*.yml *.yaml);;All Files (*)", options=options)
-            if file_name:
-                # Update the config from the current input fields
-                self.config = self.get_config()
-                with open(file_name, 'w') as file:
-                    yaml.safe_dump(self.config, file, default_flow_style=False)
-
-
-    def on_load_config_clicked(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open YAML", "", "YAML Files (*.yml)")
-        if file_name:
-            self.load_config(file_name)
-
     def load_config(self, file_name):
         with open(file_name, 'r') as file:
             self.config = yaml.safe_load(file)
@@ -109,6 +87,7 @@ class InputBeamEditorWidget(QWidget):
         }
 
         self.config = config
+
         return config
 
     def update_config(self):

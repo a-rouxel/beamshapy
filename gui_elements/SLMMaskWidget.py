@@ -1,15 +1,11 @@
-from PyQt5.QtWidgets import (QTabWidget, QGroupBox, QHBoxLayout, QFileDialog, QLineEdit, QComboBox, QFormLayout, QLabel, QScrollArea, QVBoxLayout, QCheckBox, QSpinBox, QDoubleSpinBox, QWidget)
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import (QGroupBox, QHBoxLayout, QScrollArea, QCheckBox,
+                             QWidget, QFormLayout, QComboBox,QPushButton, QLineEdit, QFileDialog)
+from PyQt5.QtCore import Qt,pyqtSignal, pyqtSlot
 
-from PyQt5.QtWidgets import (QWidget, QFormLayout, QComboBox, QDoubleSpinBox,
-                             QPushButton, QLineEdit, QLabel)
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFileDialog
 import numpy as np
-from LightPipes import mm,um
+from LightPipes import mm
 import os
-from datetime import datetime
-import h5py
+import re
 from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, translate
 class MaskParamsWidget(QWidget):
 
@@ -24,12 +20,14 @@ class MaskParamsWidget(QWidget):
 
         self.mask_type_selector = QComboBox()
         self.mask_type_selector.addItem("None")
-        self.mask_type_selector.addItem("Grating")
         self.mask_type_selector.addItem("Wedge")
-        self.mask_type_selector.addItem("Rect Amplitude")
-        self.mask_type_selector.addItem("Phase Jump")
-        self.mask_type_selector.addItem("Phase Reversal")
-        self.mask_type_selector.addItem("Weights Sinc")
+        self.mask_type_selector.addItem("ϕ target field")
+        self.mask_type_selector.addItem("modulation amplitude")
+        # self.mask_type_selector.addItem("Grating")
+        # self.mask_type_selector.addItem("Rect Amplitude")
+        # self.mask_type_selector.addItem("Phase Jump")
+        # self.mask_type_selector.addItem("Phase Reversal")
+        # self.mask_type_selector.addItem("Weights Sinc")
         self.mask_type_selector.addItem("Custom h5 Mask")
         self.mask_type_selector.currentIndexChanged.connect(self.update_mask_params)
 
@@ -148,6 +146,16 @@ class MaskParamsWidget(QWidget):
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
                                                   position=float(self.position.text())*mm,
                                                   angle = np.radians(float(self.angle_wedge.text())))
+        elif mask_type == "ϕ target field":
+
+            mask = self.beam_shaper.generate_mask(mask_type=mask_type)
+
+        elif mask_type == "modulation amplitude":
+
+            mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                  amplitude_factor=float(self.amplitude_factor.text()),
+                                                  threshold=float(self.threshold.text()))
+
 
         elif mask_type == "Rect Amplitude":
 
@@ -243,6 +251,22 @@ class MaskParamsWidget(QWidget):
             self.width.textChanged.connect(self.enable_generate_mask_button)
             self.height.textChanged.connect(self.enable_generate_mask_button)
             self.angle.textChanged.connect(self.enable_generate_mask_button)
+
+        if self.mask_type_selector.currentText() == "modulation amplitude":
+            self.amplitude_factor = QLineEdit()
+            self.amplitude_factor.setText(str(1))
+            self.threshold = QLineEdit()
+            self.threshold.setText(str(0.001))
+            self.inner_layout.addRow("amplitude factor", self.amplitude_factor)
+            self.inner_layout.addRow("threshold", self.threshold)
+
+            # Connect the textChanged signal for these parameters
+            self.amplitude_factor.textChanged.connect(self.enable_generate_mask_button)
+            self.threshold.textChanged.connect(self.enable_generate_mask_button)
+
+        if self.mask_type_selector.currentText() == "ϕ target field":
+
+            pass
 
         if self.mask_type_selector.currentText() == "Phase Jump":
             self.orientation_phase_jump = QComboBox()
@@ -502,8 +526,10 @@ class SLMMaskWidget(QWidget):
 
         self.save_crop_mask_button.setDisabled(True)
     @pyqtSlot()
-    def evaluate_operation(self):
 
+
+
+    def evaluate_operation(self):
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
 
@@ -513,11 +539,14 @@ class SLMMaskWidget(QWidget):
 
         # Custom operations dictionary
         operations = {
-            "warp": lambda x: np.angle(np.exp(1j*x))  # define your warp function here
+            "warp": lambda x: np.angle(np.exp(1j * x))  # define your warp function here
         }
 
-        # Split the operation into parts
-        parts = operation.split()
+        # Define the regex pattern to split operation into parts
+        pattern = f"({'|'.join(re.escape(op) for op in allowed_ops)}|{'|'.join(re.escape(mask) for mask in allowed_masks)}|[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?|\w+)"
+
+        # Split the operation into parts using regex
+        parts = re.findall(pattern, operation)
 
         # Check each part of the operation
         for part in parts:

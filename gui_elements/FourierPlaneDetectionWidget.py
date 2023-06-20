@@ -1,17 +1,15 @@
-from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
-                             QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
-                             QVBoxLayout, QCheckBox, QSpinBox, QWidget)
+from PyQt5.QtWidgets import (QHBoxLayout, QPushButton,
+                             QLineEdit,QFormLayout, QGroupBox, QScrollArea,
+                             QCheckBox)
 from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
 from LightPipes import Field, Phase, Intensity
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget
-from LightPipes import mm,um,nm
+from LightPipes import mm
 from PyQt5.QtWidgets import QMessageBox
-import numpy as np
-import os
-import h5py
+
 from utils import *
 class DisplayWidget(QWidget):
     def __init__(self, beam_shaper):
@@ -101,14 +99,23 @@ class DisplayWidget(QWidget):
         layout.addWidget(self.tabWidget)
 
     @pyqtSlot(np.ndarray)
-    def displayMask(self, field,x_array):
+    def displayMask(self, field,x_array,downsampling_checkbox=False, downsample_factor=1):
         # Plot the mask
         self.maskFigure.clear()
         ax1 = self.maskFigure.add_subplot(111)
 
         x_array = x_array
 
-        im = ax1.imshow(Intensity(field),extent=[x_array[0],x_array[-1], x_array[0],x_array[-1]])
+        if downsampling_checkbox:
+            intensity_field = downsample(Intensity(field), downsample_factor)
+            phase_field = downsample(Phase(field), downsample_factor)
+            x_array_2D = downsample_1d(x_array, downsample_factor)
+        else :
+            intensity_field = Intensity(field)
+            phase_field = Phase(field)
+            x_array_2D = x_array
+
+        im = ax1.imshow(intensity_field,extent=[x_array_2D[0],x_array_2D[-1], x_array_2D[0],x_array_2D[-1]])
         ax1.set_title('Intensity Map')
         ax1.set_xlabel('Position along X [in mm]')
         ax1.set_ylabel('Position along Y [in mm]')
@@ -135,7 +142,7 @@ class DisplayWidget(QWidget):
 
         self.phaseFigure.clear()
         ax4 = self.phaseFigure.add_subplot(111)
-        im = ax4.imshow(Phase(field), extent=[x_array[0], x_array[-1], x_array[0], x_array[-1]],cmap="twilight")
+        im = ax4.imshow(phase_field, extent=[x_array_2D[0], x_array_2D[-1], x_array_2D[0], x_array_2D[-1]],cmap="twilight")
         ax4.set_title('Phase Map')
         ax4.set_xlabel('Position along X [in mm]')
         ax4.set_ylabel('Position along Y [in mm]')
@@ -161,8 +168,8 @@ class DisplayWidget(QWidget):
         self.phaseCutYCanvas.draw()
 class ModulatedInputFieldDisplay(DisplayWidget):
     @pyqtSlot(Field)
-    def display_modulated_input_field(self, modulated_input_field):
-        self.displayMask(modulated_input_field,self.beam_shaper.x_array_in/mm)
+    def display_modulated_input_field(self, modulated_input_field,downsample_check,downsample_factor):
+        self.displayMask(modulated_input_field,self.beam_shaper.x_array_in/mm,downsample_check,downsample_factor)
 
 class PropagatedFFTModulatedBeamDisplay(QWidget):
     def __init__(self, beam_shaper):
@@ -179,17 +186,17 @@ class PropagatedFFTModulatedBeamDisplay(QWidget):
         self.layout.addWidget(self.tabWidget)
 
     @pyqtSlot(Field)
-    def display_fourier_plane_field(self, fourier_plane_field):
-        self.propagated_display.displayMask(fourier_plane_field, self.propagated_display.beam_shaper.x_array_out / mm)
+    def display_fourier_plane_field(self, fourier_plane_field,downsampling_checkbox, downsample_factor):
+        self.propagated_display.displayMask(fourier_plane_field, self.propagated_display.beam_shaper.x_array_out / mm,downsampling_checkbox, downsample_factor)
 
     @pyqtSlot(Field)
-    def display_fourier_filtered_field(self, fourier_filtered_field):
-        self.filtered_display.displayMask(fourier_filtered_field, self.filtered_display.beam_shaper.x_array_out / mm)
+    def display_fourier_filtered_field(self, fourier_filtered_field,downsampling_checkbox, downsample_factor):
+        self.filtered_display.displayMask(fourier_filtered_field,self.filtered_display.beam_shaper.x_array_out / mm,downsampling_checkbox, downsample_factor)
 
 class PropagatedImagePlaneDisplay(DisplayWidget):
     @pyqtSlot(Field)
-    def display_output_field(self, output_field):
-        self.displayMask(output_field,self.beam_shaper.x_array_in/mm)
+    def display_output_field(self, output_field,downsampling_checkbox, downsample_factor):
+        self.displayMask(output_field,self.beam_shaper.x_array_in/mm,downsampling_checkbox, downsample_factor)
 
 class PropagationEditor(QWidget):
     def __init__(self):
@@ -209,44 +216,13 @@ class PropagationEditor(QWidget):
 
         # Create Fourier Plane QFormLayout
         fourier_plane_layout = QFormLayout()
-        # self.crop_factor_fourier_x = QLineEdit()
-        # self.crop_factor_fourier_x.setText(str(2))
-        # self.crop_factor_fourier_y = QLineEdit()
-        # self.crop_factor_fourier_y.setText(str(4))
-        # self.crop_button = QPushButton('crop')  # Create a button
-        # # self.run_button.clicked.connect(self.crop_fourier_plane)
-        # self.interpolate_fourier_factor = QLineEdit()
-        # self.interpolate_fourier_factor.setText(str(2))
-        # self.interpolate_button = QPushButton('interpolate')  # Create a button
-        # self.interpolate_button.clicked.connect(self.interpolate_fourier_plane)
 
-        # fourier_plane_layout.addRow("crop factor X", self.crop_factor_fourier_x)
-        # fourier_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
-        # fourier_plane_layout.addRow(self.crop_button)
-        # fourier_plane_layout.addRow("interpolation factor", self.interpolate_fourier_factor)
-        # fourier_plane_layout.addRow(self.interpolate_button)
 
         fourier_plane_group = QGroupBox("Fourier Plane Settings")
         fourier_plane_group.setLayout(fourier_plane_layout)
 
-        # Create Image Plane QFormLayout
         image_plane_layout = QFormLayout()
-        # self.crop_factor_image_x = QLineEdit()
-        # self.crop_factor_image_x.setText(str(2))
-        # self.crop_factor_image_y = QLineEdit()
-        # self.crop_factor_image_y.setText(str(4))
-        # self.crop_button = QPushButton('crop')  # Create a button
-        # # self.run_button.clicked.connect(self.crop_fourier_plane)
-        # self.interpolate_image_factor = QLineEdit()
-        # self.interpolate_image_factor.setText(str(2))
-        # self.interpolate_button = QPushButton('interpolate')  # Create a button
-        # self.interpolate_button.clicked.connect(self.interpolate_fourier_plane)
 
-        # image_plane_layout.addRow("crop factor X", self.crop_factor_image_y)
-        # image_plane_layout.addRow("crop factor Y", self.crop_factor_fourier_y)
-        # image_plane_layout.addRow(self.crop_button)
-        # image_plane_layout.addRow("interpolation factor", self.interpolate_image_factor)
-        # image_plane_layout.addRow(self.interpolate_button)
 
         image_plane_group = QGroupBox("Image Plane Settings")
 
@@ -280,20 +256,20 @@ class Worker(QThread):
         self.slm_widget = slm_widget
 
     def run(self):
+        print("worker started")
 
         self.result_mask = self.slm_widget.result_mask
 
         modulated_input_beam = self.beam_shaper.phase_modulate_input_beam(self.result_mask)
         self.finished_modulate_input_beam.emit(modulated_input_beam)
-
         fourier_plane_field = self.beam_shaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
         self.finished_propagate_FFT_modulated_beam.emit(fourier_plane_field)
-
         fourier_filtered_field = self.beam_shaper.filter_beam()
         self.finished_propagate_filter_beam.emit(fourier_filtered_field)
-
         output_field = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
         self.finished_propagate_to_image_plane.emit(output_field)
+
+        print("worker finished")
 class FourierPlaneDetectionWidget(QWidget):
     def __init__(self,main_window,beam_shaper,infos_editor,slm_widget):
         super().__init__()
@@ -328,12 +304,28 @@ class FourierPlaneDetectionWidget(QWidget):
         self.save_button.setDisabled(True)
         self.save_button.clicked.connect(self.on_propagated_beams_save)
 
+        self.downsampling_horizontal_layout = QHBoxLayout()
+        # Create checkbox for downsampling
+        self.downsampling_checkbox = QCheckBox("Downsample for Map Display")
+        self.downsampling_checkbox.setChecked(True)
+
+        # Create a QLineEdit for downsampling factor
+        self.downsampling_factor_edit = QLineEdit()
+        self.downsampling_factor_edit.setText("4")
+        self.downsampling_factor_edit.setDisabled(True)
+        # Enable/Disable QLineEdit depending on the state of the checkbox
+        self.downsampling_checkbox.stateChanged.connect(self.enable_disable_factor_edit)
+
+        self.downsampling_horizontal_layout.addWidget(self.downsampling_checkbox)
+        self.downsampling_horizontal_layout.addWidget(self.downsampling_factor_edit)
+
         # Create a group box for the run button
         self.run_button_group_box = QGroupBox()
         run_button_group_layout = QVBoxLayout()
 
         run_button_group_layout.addWidget(self.propagate_button)
         run_button_group_layout.addWidget(self.save_button)
+        run_button_group_layout.addLayout(self.downsampling_horizontal_layout)
         run_button_group_layout.addWidget(self.result_display_widget)
 
         self.run_button_group_box.setLayout(run_button_group_layout)
@@ -357,6 +349,12 @@ class FourierPlaneDetectionWidget(QWidget):
 
         self.save_button.setDisabled(True)
 
+    def enable_disable_factor_edit(self, state):
+        if state == Qt.Checked:
+            self.downsampling_factor_edit.setDisabled(False)
+        else:
+            self.downsampling_factor_edit.setDisabled(True)
+
     def run_propagate(self):
 
         try:
@@ -379,6 +377,9 @@ class FourierPlaneDetectionWidget(QWidget):
             msg.setWindowTitle("Error")
             msg.exec_()
 
+        if self.downsampling_checkbox.isChecked():
+            self.downsample_factor = int(self.downsampling_factor_edit.text())
+
         self.worker = Worker(self.beam_shaper, self.slm_widget)
         self.worker.finished_modulate_input_beam.connect(self.display_modulated_input_field)
         self.worker.finished_propagate_FFT_modulated_beam.connect(self.display_fourier_plane_field)
@@ -386,23 +387,25 @@ class FourierPlaneDetectionWidget(QWidget):
         self.worker.finished_propagate_to_image_plane.connect(self.display_output_field)
         self.worker.start()
 
+
+
     @pyqtSlot(Field)
     def display_modulated_input_field(self, modulated_input_field):
         self.save_button.setDisabled(False)
         self.modulated_input_field = modulated_input_field
-        self.modulated_input_field_display.display_modulated_input_field(self.modulated_input_field)
+        self.modulated_input_field_display.display_modulated_input_field(self.modulated_input_field,self.downsampling_checkbox.isChecked(), self.downsample_factor)
 
     @pyqtSlot(Field)
     def display_fourier_plane_field(self, fourier_plane_field):
         self.fourier_plane_field = fourier_plane_field
-        self.fourier_plane_field_display.display_fourier_plane_field(self.fourier_plane_field)
+        self.fourier_plane_field_display.display_fourier_plane_field(self.fourier_plane_field,self.downsampling_checkbox.isChecked(), self.downsample_factor)
 
     @pyqtSlot(Field)
     def display_fourier_filtered_field(self, fourier_filtered_field):
         self.fourier_filtered_field = fourier_filtered_field
-        self.fourier_plane_field_display.display_fourier_filtered_field(self.fourier_filtered_field)
+        self.fourier_plane_field_display.display_fourier_filtered_field(self.fourier_filtered_field,self.downsampling_checkbox.isChecked(), self.downsample_factor)
 
     @pyqtSlot(Field)
     def display_output_field(self, output_field):
         self.output_field = output_field
-        self.image_plane_field_display.display_output_field(self.output_field)
+        self.image_plane_field_display.display_output_field(self.output_field,self.downsampling_checkbox.isChecked(), self.downsample_factor)
