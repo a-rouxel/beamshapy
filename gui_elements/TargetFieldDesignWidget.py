@@ -642,11 +642,23 @@ class TargetFieldDesignWidget(QWidget):
 
     def evaluate_operation(self):
 
+
+
         self.logger.info( "=" * 30)
         self.logger.info("  Generate Target Amplitude")
         self.logger.info("=" * 30 )
         # Get the operation from the QLineEdit
         operation = self.operation_input.text()
+
+        try:
+            self.target_amplitudes_dict["A1"]
+        except :
+            self.logger.info("  Evaluate Operation : No Target Amplitude Detected ..✘")
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("No Target Amplitude Detected")
+            msg.setInformativeText("Please create a Target Amplitude before propagating.")
+            return
 
         # Define the allowed operations and amplitudes
         allowed_ops = {"+", "-", "*", "/", "(", ")", "warp"}  # Add your custom operation name here
@@ -671,7 +683,7 @@ class TargetFieldDesignWidget(QWidget):
                     float(part)
                 except ValueError:
                     # If it can't be converted to a float, it's invalid
-                    print(f"Invalid operation: {part}")
+                    self.logger.error(f"  Evaluate Operation : Invalid operation: {part}")
                     return
 
         # Replace mask names with their numpy array representation
@@ -687,7 +699,7 @@ class TargetFieldDesignWidget(QWidget):
             if len(self.result_display_widget) > len(self.target_amplitude_params_widgets):
                 self.result_display_widget.removeTab(self.result_display_widget.count()-1)
         except:
-            print('no')
+            self.logger.info("  Evaluate Operation : No Target Amplitude Detected ..✘")
             pass
 
         # Initialize the resulting mask as an empty mask
@@ -701,7 +713,7 @@ class TargetFieldDesignWidget(QWidget):
                 self.result_target_amplitude = eval(operation)
                 self.beam_shaper.target_amplitude = self.result_target_amplitude
             except Exception as e:
-                print(f"Error evaluating operation: {e}")
+                self.logger.error(f"  Evaluate Operation : Invalid operation: {e} ..✘")
                 return
 
         if operation == "" and len(self.target_amplitudes_dict) >0:
