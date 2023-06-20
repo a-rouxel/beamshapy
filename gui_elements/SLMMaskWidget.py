@@ -26,9 +26,9 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector.addItem("modulation amplitude")
         # self.mask_type_selector.addItem("Grating")
         # self.mask_type_selector.addItem("Rect Amplitude")
-        # self.mask_type_selector.addItem("Phase Jump")
-        # self.mask_type_selector.addItem("Phase Reversal")
-        # self.mask_type_selector.addItem("Weights Sinc")
+        self.mask_type_selector.addItem("Phase Jump")
+        self.mask_type_selector.addItem("Phase Reversal")
+        #self.mask_type_selector.addItem("Weights Sinc")
         self.mask_type_selector.addItem("Custom h5 Mask")
         self.mask_type_selector.currentIndexChanged.connect(self.update_mask_params)
 
