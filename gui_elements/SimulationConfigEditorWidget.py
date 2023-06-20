@@ -1,12 +1,8 @@
-from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
-                             QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
-                             QVBoxLayout, QCheckBox, QSpinBox, QWidget)
-from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import (QLineEdit,QFormLayout, QGroupBox, QScrollArea,
+                             QVBoxLayout, QWidget)
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import yaml
-import pyqtgraph as pg
-import numpy as np
 
-from LightPipes import Field, Phase, Intensity
 
 class SimulationConfigEditorWidget(QWidget):
     sampling_generated = pyqtSignal(int)

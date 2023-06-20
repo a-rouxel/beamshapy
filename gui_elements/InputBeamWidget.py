@@ -2,22 +2,11 @@ from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
                              QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
                              QVBoxLayout, QCheckBox, QSpinBox, QWidget)
 from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
-import yaml
-import pyqtgraph as pg
-from pyqtgraph import ImageView
-import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import matplotlib.pyplot as plt
 from LightPipes import Field, Phase, Intensity
-# from InputBeamEditorWidget import InputBeamEditorWidget
-# from SimulationConfigEditorWidget import SimulationConfigEditorWidget
 from utils import *
-import h5py
-import matplotlib.figure as mpl_fig
-import matplotlib.backends.backend_qt5agg as mpl_backend
-import numpy as np
-from LightPipes import mm
+
 
 class InputBeamIntensityDisplay(QWidget):
     def __init__(self):
@@ -84,6 +73,7 @@ class InputBeamPhaseDisplay(QWidget):
 
 class Worker(QThread):
     finished_generate_input_beam = pyqtSignal(Field)
+    finished_generate_sampling = pyqtSignal(bool)
 
     def __init__(self, input_beam_editor,simulation_editor,beam_shaper,logger=None):
         super().__init__()
@@ -97,10 +87,9 @@ class Worker(QThread):
         # Put your analysis here
 
         self.beam_shaper.generate_sampling(self.simulation_config,self.input_beam_config)
-        self.logger.info("  Step 3: Beam shaper - generating input field & fourier field sampling... ✔")
+        self.finished_generate_sampling.emit(True)
         self.simulation_editor.update_nb_of_samples(self.beam_shaper.nb_of_samples)
         input_field = self.beam_shaper.generate_input_beam(self.input_beam_config)
-        self.logger.info("  Step 4: Beam shaper - generating input field arrays ... ✔")
         self.finished_generate_input_beam.emit(input_field)
 
 
@@ -207,13 +196,21 @@ class InputBeamWidget(QWidget):
 
         # Create the worker and connect the signals
         self.worker = Worker(self.input_beam_editor, self.simulation_editor, self.beam_shaper,self.logger)
+        self.worker.finished_generate_sampling.connect(self.state_beam_shaper_sampling_generated)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_intensity)
         self.worker.finished_generate_input_beam.connect(self.display_input_beam_phase)
         self.worker.start()
 
+    @pyqtSlot(bool)
+    def state_beam_shaper_sampling_generated(self, state):
+        if state:
+            self.logger.info("  Step 3: Beam shaper - generating input & fourier fields sampling... ✔")
+
+
     @pyqtSlot(Field)
     def display_input_beam_intensity(self, input_beam):
-        print("Displaying input beam intensity")
+        self.logger.info("  Step 4: Beam shaper - LightPipes - generating input field arrays ... ✔")
+
         self.save_input_beam_button.setDisabled(False)
         self.last_generated_beam_field = input_beam
 
@@ -228,7 +225,7 @@ class InputBeamWidget(QWidget):
 
     @pyqtSlot(Field)
     def display_input_beam_phase(self, input_beam):
-        print("Displaying input beam phase")
+
 
         # Check if downsampling is enabled and get the factor
         if self.downsampling_checkbox.isChecked():

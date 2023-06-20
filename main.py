@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDockWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDockWidget,QTextEdit
 from PyQt5.QtGui import QIcon
 from gui_elements import InputBeamWidget
 from gui_elements import InputBeamEditorWidget
@@ -10,8 +10,10 @@ from gui_elements import InfosEditorWidget
 from gui_elements import FourierPlaneDetectionWidget
 from BeamShaper import BeamShaper
 
+import os
 import logging
-from PyQt5.QtWidgets import QTextEdit
+
+os.environ["QT_NO_FT_CACHE"] = "1"
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
@@ -91,13 +93,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, self.log_dock)
         self.setGeometry(100, 100, 1000, 900)
 
-        # Use self.logger to log messages
 
-        #
-        # # Load and apply the stylesheet
-        # with open("./Ubuntu.qss", "r") as file:
-        #     qss = file.read()
-        #     self.setStyleSheet(qss)
 
 
 if __name__ == '__main__':

@@ -1,12 +1,7 @@
-from PyQt5.QtWidgets import (QTabWidget,QHBoxLayout, QPushButton, QFileDialog,
-                             QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
+from PyQt5.QtWidgets import (QLineEdit, QComboBox,QFormLayout, QGroupBox, QScrollArea,
                              QVBoxLayout, QCheckBox, QSpinBox, QWidget)
-from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
 import yaml
-import pyqtgraph as pg
-import numpy as np
 
-from LightPipes import Field, Phase, Intensity
 
 
 

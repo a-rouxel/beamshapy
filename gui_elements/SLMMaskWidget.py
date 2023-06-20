@@ -1,15 +1,11 @@
-from PyQt5.QtWidgets import (QTabWidget, QGroupBox, QHBoxLayout, QFileDialog, QLineEdit, QComboBox, QFormLayout, QLabel, QScrollArea, QVBoxLayout, QCheckBox, QSpinBox, QDoubleSpinBox, QWidget)
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-import re
-from PyQt5.QtWidgets import (QWidget, QFormLayout, QComboBox, QDoubleSpinBox,
-                             QPushButton, QLineEdit, QLabel)
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import (QGroupBox, QHBoxLayout, QScrollArea, QCheckBox,
+                             QWidget, QFormLayout, QComboBox,QPushButton, QLineEdit, QFileDialog)
+from PyQt5.QtCore import Qt,pyqtSignal, pyqtSlot
+
 import numpy as np
-from LightPipes import mm,um
+from LightPipes import mm
 import os
-from datetime import datetime
-import h5py
+import re
 from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, translate
 class MaskParamsWidget(QWidget):
 
