@@ -2,6 +2,8 @@ import numpy as np
 import yaml
 from LightPipes import *
 from utils import *
+from scipy import interpolate
+from skimage.measure import block_reduce
 class BeamShaper():
 
     def __init__(self,simulation_config,input_beam_config,initial_config_file):
@@ -163,7 +165,7 @@ class BeamShaper():
                 print("mask_type not recognized")
             return mask
 
-    def generate_target_amplitude(self,amplitude_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None):
+    def generate_target_amplitude(self,amplitude_type, period=None,position = None, scale_factor=1,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None):
         if self.x_array_in is None:
             raise ValueError("Please generate Input Beam first")
 
@@ -184,7 +186,7 @@ class BeamShaper():
                 raise ValueError("Please provide h5 file path for custom mask.")
 
             with h5py.File(amplitude_path, 'r') as f:
-                mask = f['mask'][:]
+                mask = f['amplitude'][:]
 
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
@@ -195,9 +197,42 @@ class BeamShaper():
                 new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
                 mask = new_mask
 
-            else:
-                print("mask_type not recognized")
-            return mask
+
+
+            # Get original shape
+            original_shape = mask.shape
+
+            if scale_factor > 1:
+                # First crop
+                crop_size = (int(original_shape[0] / scale_factor), int(original_shape[1] / scale_factor))
+                startx = original_shape[1] // 2 - (crop_size[1] // 2)
+                starty = original_shape[0] // 2 - (crop_size[0] // 2)
+                mask = mask[starty:starty + crop_size[0], startx:startx + crop_size[1]]
+
+            elif scale_factor < 1:
+
+                reduction_factor = int(1 / scale_factor)
+                mask = block_reduce(mask, block_size=(reduction_factor, reduction_factor), func=np.mean)
+                # Padding
+                pad_size_x = original_shape[1] - mask.shape[1]
+                pad_size_y = original_shape[0] - mask.shape[0]
+                mask = np.pad(mask, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
+                                     (pad_size_x // 2, pad_size_x - pad_size_x // 2)],
+                              mode='constant')
+
+            # Then interpolate to the original size
+            x = np.linspace(0, mask.shape[1], original_shape[1])
+            y = np.linspace(0, mask.shape[0], original_shape[0])
+            xx, yy = np.meshgrid(x, y)
+            newfunc = interpolate.interp2d(np.arange(mask.shape[1]), np.arange(mask.shape[0]), mask, kind='linear')
+            new_mask = newfunc(x, y)
+
+            amplitude = new_mask
+
+            return amplitude
+        else:
+            print("amplitude type not recognized")
+
 
     def inverse_fourier_transform(self,complex_amplitude):
 

@@ -272,8 +272,10 @@ class TargetAmplitudeParamsWidget(QWidget):
         elif target_amplitude_type == "Custom h5 Amplitude":
             # Open a file dialog to select the mask
             file_path = self.file_path.text()
+            scale_size = self.scale_size.text()
             target_amplitude = self.beam_shaper.generate_target_amplitude(amplitude_type=target_amplitude_type,
-                                           mask_path=file_path)
+                                                                           amplitude_path=file_path,
+                                                                            scale_factor=float(self.scale_size.text()))
         else :
             return
 
@@ -350,13 +352,18 @@ class TargetAmplitudeParamsWidget(QWidget):
         # Custom h5 Amplitude parameters: file path
         elif self.target_amplitude_type_selector.currentText() == "Custom h5 Amplitude":
             self.file_path = QLineEdit()
+            self.scale_size = QLineEdit()
+            self.scale_size.setText(str(1))
 
             self.browse_button = QPushButton("Browse")
             self.browse_button.clicked.connect(self.browse_file)
 
             self.inner_layout.addRow("File Path", self.file_path)
             self.inner_layout.addRow("", self.browse_button)
+            self.inner_layout.addRow("Scale Size", self.scale_size)
 
+            # Connect the textChanged signal for these parameters
+            self.scale_size.textChanged.connect(self.enable_generate_target_amplitude_button)
             self.file_path.textChanged.connect(self.enable_generate_target_amplitude_button)
             
     def browse_file(self):
