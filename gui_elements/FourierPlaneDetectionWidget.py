@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QHBoxLayout, QPushButton,
                              QLineEdit,QFormLayout, QGroupBox, QScrollArea,
-                             QCheckBox)
+                             QCheckBox,QLabel)
 from PyQt5.QtCore import Qt,QThread, pyqtSignal, pyqtSlot
 from LightPipes import Field, Phase, Intensity
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -25,7 +25,8 @@ class DisplayWidget(QWidget):
         self.maskFigure = Figure()
         self.maskCanvas = FigureCanvas(self.maskFigure)
         self.maskCanvas.mpl_connect('button_press_event', self.onclick_intensity)
-        self.maskToolbar = NavigationToolbar(self.maskCanvas, self)
+
+
 
         self.cutXFigure = Figure()
         self.cutXCanvas_intensity = FigureCanvas(self.cutXFigure)
@@ -52,9 +53,15 @@ class DisplayWidget(QWidget):
         # Create Widgets for each tab to hold the toolbar and the figure canvas
         # Existing widgets
         self.maskWidget = QWidget()
+
         self.maskLayout = QVBoxLayout(self.maskWidget)
+        self.maskToolbar = NavigationToolbar(self.maskCanvas, self)
         self.maskLayout.addWidget(self.maskToolbar)
         self.maskLayout.addWidget(self.maskCanvas)
+
+        # Create the label and add it to the layout
+        self.maskZoomLabel = QLabel(self.maskWidget)
+        self.maskLayout.addWidget(self.maskZoomLabel)
 
         self.cutXWidget = QWidget()
         self.cutXLayout = QVBoxLayout(self.cutXWidget)
@@ -104,7 +111,8 @@ class DisplayWidget(QWidget):
     def displayMask(self, field,x_array,downsampling_checkbox=False, downsample_factor=1):
         # Plot the mask
         self.maskFigure.clear()
-        ax1 = self.maskFigure.add_subplot(111)
+        self.maskAxes = self.maskFigure.add_subplot(111)
+
 
         x_array = x_array
 
@@ -121,13 +129,13 @@ class DisplayWidget(QWidget):
         self.intensity = intensity_field
         self.phase = phase_field
 
-        im = ax1.imshow(intensity_field,extent=[x_array_2D[0],x_array_2D[-1], x_array_2D[0],x_array_2D[-1]])
-        self.vline_intensity = ax1.axvline(x_array_2D[0], color='r')  # initial position of vertical line
-        self.hline_intensity = ax1.axhline(x_array_2D[0], color='r')  # initial position of horizontal line
-        ax1.set_title('Intensity Map')
-        ax1.set_xlabel('Position along X [in mm]')
-        ax1.set_ylabel('Position along Y [in mm]')
-        self.maskFigure.colorbar(im, ax=ax1,label='Intensity Value [no units]')
+        im = self.maskAxes.imshow(intensity_field,extent=[x_array_2D[0],x_array_2D[-1], x_array_2D[0],x_array_2D[-1]])
+        self.vline_intensity = self.maskAxes.axvline(x_array_2D[0], color='r')  # initial position of vertical line
+        self.hline_intensity = self.maskAxes.axhline(x_array_2D[0], color='r')  # initial position of horizontal line
+        self.maskAxes.set_title('Intensity Map')
+        self.maskAxes.set_xlabel('Position along X [in mm]')
+        self.maskAxes.set_ylabel('Position along Y [in mm]')
+        self.maskFigure.colorbar(im, ax=self.maskAxes,label='Intensity Value [no units]')
         self.maskCanvas.draw()
 
         # Plot the cut along X
@@ -178,6 +186,8 @@ class DisplayWidget(QWidget):
         self.cutYCanvas_phase.draw()
 
     def onclick_intensity(self, event):
+
+
         ix, iy = event.xdata, event.ydata
 
         # Convert click coordinates to array indices
@@ -201,6 +211,21 @@ class DisplayWidget(QWidget):
         self.cutYFigure.axes[0].set_ylim(cut_y_data.min() - np.abs(cut_y_data.min())*0.1, cut_y_data.max() +  np.abs(cut_y_data.max())*0.1)
         self.cutYCanvas_intensity.draw()
 
+        # Get the current viewing limits
+        xlim = self.maskAxes.get_xlim()
+        ylim = self.maskAxes.get_ylim()
+
+        # Convert the viewing limits to array indices
+        x_indices = np.where((self.x_array_in >= xlim[0]) & (self.x_array_in <= xlim[1]))[0]
+        y_indices = np.where((self.x_array_in >= ylim[0]) & (self.x_array_in <= ylim[1]))[0]
+
+        # Print the array corresponding to the current zoom region
+        zoomed_intensity = self.intensity[np.ix_(y_indices, x_indices)]
+        self.zoomedIntensity_power_cropped = np.sum(np.sum(zoomed_intensity))
+        self.zoomedIntensity_power_total = np.sum(np.sum(self.intensity))
+        self.percentage = self.zoomedIntensity_power_cropped / self.zoomedIntensity_power_total * 100
+        self.maskZoomLabel.setText(
+            f'POWER : Cropped: {self.zoomedIntensity_power_cropped}, Total: {self.zoomedIntensity_power_total}, Percentage: {self.percentage}')
     def onclick_phase(self, event):
         ix, iy = event.xdata, event.ydata
 
@@ -258,6 +283,64 @@ class PropagatedImagePlaneDisplay(DisplayWidget):
     @pyqtSlot(Field)
     def display_output_field(self, output_field,downsampling_checkbox, downsample_factor):
         self.displayMask(output_field,self.beam_shaper.x_array_in/mm,downsampling_checkbox, downsample_factor)
+
+# class PowerResultsEditor(QWidget):
+#     def __init__(self):
+#         super().__init__()
+#
+#         # Create a QScrollArea
+#         scroll = QScrollArea(self)
+#         scroll.setWidgetResizable(True)
+#
+#         # Create a widget for the scroll area
+#         scroll_widget = QWidget()
+#
+#         # Create general QFormLayout
+#         general_layout = QFormLayout()
+#         general_group = QGroupBox("Energy Results")
+#         general_group.setLayout(general_layout)
+#
+#         # Create Fourier Plane QFormLayout
+#         fourier_plane_layout = QFormLayout()
+#
+#         self.power_inputfield = QLineEdit()
+#         self.power_inputfield.setReadOnly(True)  # The dimensions should be read-only
+#
+#         self.power_fourierfield = QLineEdit()
+#         self.power_fourierfield.setReadOnly(True)  # The dimensions should be read-only
+#         self.power_filteredfourierfield = QLineEdit()
+#         self.power_filteredfield.setReadOnly(True)  # The dimensions should be read-only
+#
+#         fourier_plane_layout.addRow("Spatial Filter type", self.spatial_filter_type)
+#         fourier_plane_layout.addRow("radius [in um]", self.spatial_filter_radius)
+#
+#
+#
+#         fourier_plane_group = QGroupBox("Fourier Plane Settings")
+#         fourier_plane_group.setLayout(fourier_plane_layout)
+#
+#         image_plane_layout = QFormLayout()
+#
+#
+#         image_plane_group = QGroupBox("Image Plane Settings")
+#
+#         image_plane_group.setLayout(image_plane_layout)
+#
+#         # Add groups to main layout
+#         main_layout = QVBoxLayout()
+#         main_layout.addWidget(general_group)
+#         main_layout.addWidget(fourier_plane_group)
+#         main_layout.addWidget(image_plane_group)
+#
+#         # Set the layout of the widget within the scroll area
+#         scroll_widget.setLayout(main_layout)
+#
+#         # Set the widget for the scroll area
+#         scroll.setWidget(scroll_widget)
+#
+#         # Create a layout for the current widget and add the scroll area
+#         layout = QVBoxLayout(self)
+#         layout.addWidget(scroll)
 
 class PropagationEditor(QWidget):
     def __init__(self):
@@ -367,8 +450,19 @@ class FourierPlaneDetectionWidget(QWidget):
 
         self.layout = QHBoxLayout()
 
+        # New QVBoxLayout for propagation_editor and energy_results
+        self.vertical_layout = QVBoxLayout()
+
         self.propagation_editor = PropagationEditor()
-        self.layout.addWidget(self.propagation_editor)
+        # self.energy_results = PowerResultsEditor()
+
+        # Add widgets to the new vertical layout
+        # self.vertical_layout.addWidget(self.energy_results)
+        self.vertical_layout.addWidget(self.propagation_editor)
+
+        # Add the new vertical layout to the main layout
+        self.layout.addLayout(self.vertical_layout)
+
 
         self.result_display_widget = QTabWidget()
 
@@ -413,6 +507,7 @@ class FourierPlaneDetectionWidget(QWidget):
         run_button_group_layout.addWidget(self.save_button)
         run_button_group_layout.addLayout(self.downsampling_horizontal_layout)
         run_button_group_layout.addWidget(self.result_display_widget)
+
 
         self.run_button_group_box.setLayout(run_button_group_layout)
         self.layout.addWidget(self.run_button_group_box)

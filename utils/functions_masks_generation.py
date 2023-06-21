@@ -1,22 +1,22 @@
 
 import numpy as np
 from scipy.optimize import brentq
-def Simple2DBlazedGratingMask(GridPositionMatrix_X, GridPositionMatrix_Y, period, angles):
+def Simple2DBlazedGratingMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, period, angles):
     assert len(angles) == 3, "Three angles required for three sections of the mask."
 
     # Calculate grid sizes
-    grid_size_x = GridPositionMatrix_X[-1, -1] - GridPositionMatrix_X[0, 0]
-    grid_size_y = GridPositionMatrix_Y[-1, -1] - GridPositionMatrix_Y[0, 0]
+    grid_size_x = GridPositionMatrix_X_in[-1, -1] - GridPositionMatrix_X_in[0, 0]
+    grid_size_y = GridPositionMatrix_Y_in[-1, -1] - GridPositionMatrix_Y_in[0, 0]
 
     # Initialize the mask
-    mask = np.zeros(GridPositionMatrix_X.shape)
+    mask = np.zeros(GridPositionMatrix_X_in.shape)
 
     # Create a distance matrix representing the distance from the center
-    GridDistanceMatrix = np.sqrt(GridPositionMatrix_X ** 2 + GridPositionMatrix_Y ** 2)
+    GridDistanceMatrix = np.sqrt(GridPositionMatrix_X_in ** 2 + GridPositionMatrix_Y_in ** 2)
     max_radius = np.sqrt(grid_size_x ** 2 + grid_size_y ** 2) / 2  # maximum radius covering the grid
 
     # Create angle array to determine the region
-    angle_array = np.arctan2(GridPositionMatrix_Y, GridPositionMatrix_X)
+    angle_array = np.arctan2(GridPositionMatrix_Y_in, GridPositionMatrix_X_in)
     angle_array = (angle_array + np.pi) % (2 * np.pi)  # convert range from [-pi, pi] to [0, 2*pi]
 
     # Generate the three grating masks
@@ -27,7 +27,7 @@ def Simple2DBlazedGratingMask(GridPositionMatrix_X, GridPositionMatrix_Y, period
 
         # Rotate grid positions
         rotated_positions = np.einsum('ji, mni -> jmn', rotation_matrix,
-                                      np.dstack([GridPositionMatrix_X, GridPositionMatrix_Y]))
+                                      np.dstack([GridPositionMatrix_X_in, GridPositionMatrix_Y_in]))
         rotated_X = rotated_positions[0, :, :]
         grating_masks.append(rotated_X % period)
 
@@ -63,26 +63,26 @@ def generate_sampling(grid_size,sampling,focal_length,wavelength):
 
     x = np.linspace(-grid_size / 2, grid_size / 2, sampling)
     y = np.linspace(-grid_size / 2, grid_size / 2, sampling)
-    GridPositionMatrix_X, GridPositionMatrix_Y = np.meshgrid(x, y)
+    GridPositionMatrix_X_in, GridPositionMatrix_Y_in = np.meshgrid(x, y)
 
-    return delta_x_in, delta_x_out, x_array_in, x_array_out, GridPositionMatrix_X, GridPositionMatrix_Y
+    return delta_x_in, delta_x_out, x_array_in, x_array_out, GridPositionMatrix_X_in, GridPositionMatrix_Y_in
 
-def generate_section_amplitude_masks(GridPositionMatrix_X, GridPositionMatrix_Y):
+def generate_section_amplitude_masks(GridPositionMatrix_X_in, GridPositionMatrix_Y_in):
     # Calculate grid sizes
-    grid_size_x = GridPositionMatrix_X[-1, -1] - GridPositionMatrix_X[0, 0]
-    grid_size_y = GridPositionMatrix_Y[-1, -1] - GridPositionMatrix_Y[0, 0]
+    grid_size_x = GridPositionMatrix_X_in[-1, -1] - GridPositionMatrix_X_in[0, 0]
+    grid_size_y = GridPositionMatrix_Y_in[-1, -1] - GridPositionMatrix_Y_in[0, 0]
 
     # Create a distance matrix representing the distance from the center
-    GridDistanceMatrix = np.sqrt(GridPositionMatrix_X**2 + GridPositionMatrix_Y**2)
+    GridDistanceMatrix = np.sqrt(GridPositionMatrix_X_in**2 + GridPositionMatrix_Y_in**2)
     max_radius = np.sqrt(grid_size_x**2 + grid_size_y**2) / 2  # maximum radius covering the grid
 
     # Create angle array to determine the region
-    angle_array = np.arctan2(GridPositionMatrix_Y, GridPositionMatrix_X)
+    angle_array = np.arctan2(GridPositionMatrix_Y_in, GridPositionMatrix_X_in)
     angle_array = (angle_array + np.pi) % (2*np.pi)  # convert range from [-pi, pi] to [0, 2*pi]
 
     masks = []
     for i in range(3):
-        mask = np.zeros(GridPositionMatrix_X.shape)
+        mask = np.zeros(GridPositionMatrix_X_in.shape)
         mask[((angle_array >= i*2*np.pi/3) & (angle_array < (i+1)*2*np.pi/3) & (GridDistanceMatrix <= max_radius))] = 1
         masks.append(mask)
 
@@ -161,7 +161,7 @@ def Simple2DWedgeMask(x_array,wavelength,x_position,focal_length):
 def sinc_resized(x,step):
     return np.sinc(x/step)
 
-def PhaseReversalMask(GridPositionMatrix_X,GridPositionMatrix_Y,input_waist,sigma_x,sigma_y):
+def PhaseReversalMask(GridPositionMatrix_X_in,GridPositionMatrix_Y_in,input_waist,sigma_x,sigma_y):
 
 
     sinc_step_x = input_waist*sigma_x
@@ -173,48 +173,48 @@ def PhaseReversalMask(GridPositionMatrix_X,GridPositionMatrix_Y,input_waist,sigm
     print("depth_param: ", np.round(depth_param,2)," rad")
 
     # sinc_mask = np.sinc(GridDistanceMatrix/sinc_step*10*um)
-    sinc_mask_x = sinc_resized(GridPositionMatrix_X,sinc_step_x)
-    sinc_mask_y = sinc_resized(GridPositionMatrix_Y,sinc_step_y)
+    sinc_mask_x = sinc_resized(GridPositionMatrix_X_in,sinc_step_x)
+    sinc_mask_y = sinc_resized(GridPositionMatrix_Y_in,sinc_step_y)
     sinc_mask = sinc_mask_x*sinc_mask_y
 
-    M = np.zeros(GridPositionMatrix_X.shape)
+    M = np.zeros(GridPositionMatrix_X_in.shape)
     M[sinc_mask < 0] = 1
     M *= depth_param
 
     return M
 
-def RectangularAmplitudeMask(GridPositionMatrix_X, GridPositionMatrix_Y, angle, width, height):
+def RectangularAmplitudeMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, angle, width, height):
 
-    mask = np.zeros(GridPositionMatrix_X.shape)
+    mask = np.zeros(GridPositionMatrix_X_in.shape)
     # rotate the grid
-    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
-    GridPositionMatrix_Y_rot = GridPositionMatrix_Y * np.cos(angle) + GridPositionMatrix_X * np.sin(angle)
+    GridPositionMatrix_X_in_rot = GridPositionMatrix_X_in * np.cos(angle) - GridPositionMatrix_Y_in * np.sin(angle)
+    GridPositionMatrix_Y_in_rot = GridPositionMatrix_Y_in * np.cos(angle) + GridPositionMatrix_X_in * np.sin(angle)
 
-    mask[(np.abs(GridPositionMatrix_X_rot) < width/2) & (np.abs(GridPositionMatrix_Y_rot) < height/2)] = 1
+    mask[(np.abs(GridPositionMatrix_X_in_rot) < width/2) & (np.abs(GridPositionMatrix_Y_in_rot) < height/2)] = 1
 
     return mask
 
-def SinusAmplitudeArray(GridPositionMatrix_X,GridPositionMatrix_Y,period,angle):
+def SinusAmplitudeArray(GridPositionMatrix_X_in,GridPositionMatrix_Y_in,period,angle):
 
-    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
-    mask = np.sin(2 * np.pi * GridPositionMatrix_X_rot / period)
+    GridPositionMatrix_X_in_rot = GridPositionMatrix_X_in * np.cos(angle) - GridPositionMatrix_Y_in * np.sin(angle)
+    mask = np.sin(2 * np.pi * GridPositionMatrix_X_in_rot / period)
     return mask
 
 
-def CosinusAmplitudeArray(GridPositionMatrix_X, GridPositionMatrix_Y, period, angle):
-    GridPositionMatrix_X_rot = GridPositionMatrix_X * np.cos(angle) - GridPositionMatrix_Y * np.sin(angle)
+def CosinusAmplitudeArray(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, period, angle):
+    GridPositionMatrix_X_in_rot = GridPositionMatrix_X_in * np.cos(angle) - GridPositionMatrix_Y_in * np.sin(angle)
 
-    mask = np.cos(2 * np.pi * GridPositionMatrix_X_rot / period)
+    mask = np.cos(2 * np.pi * GridPositionMatrix_X_in_rot / period)
     return mask
 
-def PiPhaseJumpMask(GridPositionMatrix_X, GridPositionMatrix_Y, orientation, position):
+def PiPhaseJumpMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, orientation, position):
 
-    mask = np.zeros(GridPositionMatrix_X.shape)
+    mask = np.zeros(GridPositionMatrix_X_in.shape)
 
     if orientation == "Vertical":
-        mask[GridPositionMatrix_Y > position] = np.pi
+        mask[GridPositionMatrix_Y_in > position] = np.pi
     elif orientation == "Horizontal":
-        mask[GridPositionMatrix_X > position] = np.pi
+        mask[GridPositionMatrix_X_in > position] = np.pi
 
     return mask
 

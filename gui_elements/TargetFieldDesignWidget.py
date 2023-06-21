@@ -292,7 +292,7 @@ class TargetAmplitudeParamsWidget(QWidget):
 
         self.generated_target_amplitude = target_amplitude
         self.generate_target_amplitude_button.setDisabled(True)
-        self.target_amplitudeGenerated.emit(target_amplitude, self.beam_shaper.x_array_in)
+        self.target_amplitudeGenerated.emit(target_amplitude, self.beam_shaper.x_array_out)
 
     def update_target_amplitude_params(self):
         # Clear the previous parameters (if any) by removing the layout's rows, but keep the first 2 rows

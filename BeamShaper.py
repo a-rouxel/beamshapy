@@ -63,16 +63,18 @@ class BeamShaper():
         x_array_out = np.arange(-self.nb_of_samples / 2, self.nb_of_samples / 2, 1)
         x_array_out *= delta_x_out
 
-        x = np.linspace(-self.input_grid_size / 2, self.input_grid_size / 2, self.nb_of_samples)
-        y = np.linspace(-self.input_grid_size / 2, self.input_grid_size / 2, self.nb_of_samples)
-        GridPositionMatrix_X, GridPositionMatrix_Y = np.meshgrid(x, y)
+        GridPositionMatrix_X_in, GridPositionMatrix_Y_in = np.meshgrid(x_array_in, x_array_in)
+        GridPositionMatrix_X_out, GridPositionMatrix_Y_out = np.meshgrid(x_array_out, x_array_out)
+
 
         self.delta_x_in = delta_x_in
         self.delta_x_out = delta_x_out
         self.x_array_in = x_array_in
         self.x_array_out = x_array_out
-        self.GridPositionMatrix_X = GridPositionMatrix_X
-        self.GridPositionMatrix_Y = GridPositionMatrix_Y
+        self.GridPositionMatrix_X_in = GridPositionMatrix_X_in
+        self.GridPositionMatrix_Y_in = GridPositionMatrix_Y_in
+        self.GridPositionMatrix_X_out = GridPositionMatrix_X_out
+        self.GridPositionMatrix_Y_out = GridPositionMatrix_Y_out
 
     def generate_correction_tab(self,nb_of_samples=1000,func=root_theorical_deformation_sinc):
         a_values, correction_tab = generate_correction_tab(nb_of_samples, func=func)
@@ -118,24 +120,24 @@ class BeamShaper():
 
 
         if mask_type == "Rect Amplitude":
-            mask = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
+            mask = RectangularAmplitudeMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,angle, width,height)
             return mask
 
         if mask_type == "Phase Jump":
-            mask = PiPhaseJumpMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,orientation, position)
+            mask = PiPhaseJumpMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,orientation, position)
             return mask
 
         if mask_type == "Phase Reversal":
             self.sigma_x = sigma_x
             self.sigma_y = sigma_y
-            mask = PhaseReversalMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,self.input_waist,sigma_x,sigma_y)
+            mask = PhaseReversalMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,self.input_waist,sigma_x,sigma_y)
             self.phase_inversed_Field = SubPhase(self.input_beam,mask)
 
             return mask
 
         if mask_type == "Weights Sinc":
-            sinc_mask_x = sinc_resized(self.GridPositionMatrix_X, self.input_waist*self.sigma_x)
-            sinc_mask_y = sinc_resized(self.GridPositionMatrix_Y, self.input_waist*self.sigma_y)
+            sinc_mask_x = sinc_resized(self.GridPositionMatrix_X_in, self.input_waist*self.sigma_x)
+            sinc_mask_y = sinc_resized(self.GridPositionMatrix_Y_in, self.input_waist*self.sigma_y)
             target_amplitude = sinc_mask_x*sinc_mask_y
 
             input_amplitude = self.phase_inversed_Field.field.real
@@ -154,8 +156,8 @@ class BeamShaper():
 
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            if mask.shape != self.GridPositionMatrix_X.shape:
-                new_mask = np.zeros_like(self.GridPositionMatrix_X)
+            if mask.shape != self.GridPositionMatrix_X_in.shape:
+                new_mask = np.zeros_like(self.GridPositionMatrix_X_in)
                 x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
                 y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
                 new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
@@ -170,15 +172,15 @@ class BeamShaper():
             raise ValueError("Please generate Input Beam first")
 
         if amplitude_type == "Rectangle":
-            amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
+            amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,angle, width,height)
             return amplitude
 
         if amplitude_type == "Sinus":
-            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle)
             return amplitude
 
         if amplitude_type == "Cosinus":
-            amplitude = CosinusAmplitudeArray(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,period,angle)
+            amplitude = CosinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle)
             return amplitude
 
         if amplitude_type == "Custom h5 Amplitude":
@@ -190,8 +192,8 @@ class BeamShaper():
 
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
             # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            if mask.shape != self.GridPositionMatrix_X.shape:
-                new_mask = np.zeros_like(self.GridPositionMatrix_X)
+            if mask.shape != self.GridPositionMatrix_X_in.shape:
+                new_mask = np.zeros_like(self.GridPositionMatrix_X_in)
                 x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
                 y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
                 new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
@@ -237,7 +239,7 @@ class BeamShaper():
     def inverse_fourier_transform(self,complex_amplitude):
 
         # check if complex amplitude has same dimensions as GridPositionMatrix
-        if complex_amplitude.shape != self.GridPositionMatrix_X.shape:
+        if complex_amplitude.shape != self.GridPositionMatrix_X_in.shape:
             raise ValueError("Complex amplitude must have same dimensions as GridPositionMatrix")
 
 
@@ -247,6 +249,9 @@ class BeamShaper():
 
         self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
 
+        self.inverse_fourier_target_field = self.phase_filter(self.inverse_fourier_target_field)
+
+
         return self.inverse_fourier_target_field
 
     def get_field_phase(self,field):
@@ -254,6 +259,14 @@ class BeamShaper():
 
     def get_field_intensity(self,field):
         return Intensity(field)
+
+    def phase_filter(self,field):
+        phase = Phase(field)
+        phase[np.pi - np.abs(phase)<10**-9] = np.pi
+        phase[np.abs(phase)<10**-9] = 0
+        field = SubPhase(field,phase)
+
+        return field
     def normalize_field_by_input_power(self,field):
         field_power = np.sum(np.sum(Intensity(field)))
         normalized_intensity = Intensity(field) * self.power / field_power
