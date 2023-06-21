@@ -6,7 +6,7 @@ import numpy as np
 from LightPipes import mm
 import os
 import re
-from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, translate
+from utils import save_mask, normalize, discretize_array, crop_and_save_as_bmp, translate, correct_modulation_values
 class MaskParamsWidget(QWidget):
 
     maskGenerated = pyqtSignal(np.ndarray,np.ndarray)
@@ -165,7 +165,6 @@ class MaskParamsWidget(QWidget):
                                                       threshold=float(self.threshold.text()))
             except:
                 return
-
 
         elif mask_type == "Rect Amplitude":
 
@@ -573,12 +572,13 @@ class SLMMaskWidget(QWidget):
         operation = self.operation_input.text()
 
         # Define the allowed operations and masks
-        allowed_ops = {"+", "-", "*", "/", "(", ")", "warp"}  # Add your custom operation name here
+        allowed_ops = {"+", "-", "*", "/", "(", ")", "warp","correct"}  # Add your custom operation name here
         allowed_masks = set(self.masks_dict.keys())  # Dynamically get the list of current masks
 
         # Custom operations dictionary
         operations = {
-            "warp": lambda x: np.angle(np.exp(1j * x))  # define your warp function here
+            "warp": lambda x: np.angle(np.exp(1j * x)),  # define your warp function here
+            "correct": lambda x: correct_modulation_values(x,self.beam_shaper.correction_a_values,self.beam_shaper.correction_tab)
         }
 
         # Define the regex pattern to split operation into parts

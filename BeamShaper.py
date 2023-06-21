@@ -14,6 +14,7 @@ class BeamShaper():
             self.load_config(self.initial_config_file)
 
         self.generate_sampling(simulation_config,input_beam_config)
+        self.generate_correction_tab(nb_of_samples=1000,func=root_theorical_deformation_sinc)
 
     def generate_input_beam(self,input_beam_config):
 
@@ -71,7 +72,12 @@ class BeamShaper():
         self.GridPositionMatrix_X = GridPositionMatrix_X
         self.GridPositionMatrix_Y = GridPositionMatrix_Y
 
+    def generate_correction_tab(self,nb_of_samples=1000,func=root_theorical_deformation_sinc):
+        a_values, correction_tab = generate_correction_tab(nb_of_samples, func=func)
+        self.correction_tab = correction_tab
+        self.correction_a_values = a_values
 
+        return a_values, correction_tab
     def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
 
 
@@ -107,6 +113,7 @@ class BeamShaper():
             print("target amplitude",np.max(target_abs_amplitude))
             mask = WeightsMask(input_abs_amplitude,target_abs_amplitude,threshold)
             return mask
+
 
         if mask_type == "Rect Amplitude":
             mask = RectangularAmplitudeMask(self.GridPositionMatrix_X,self.GridPositionMatrix_Y,angle, width,height)
@@ -218,6 +225,12 @@ class BeamShaper():
         normalized_field = SubIntensity(field,normalized_intensity)
         return normalized_field
 
+    def normalize_by_filtered_power(self,field):
+        field_power = np.sum(np.sum(Intensity(field)))
+        normalized_intensity = Intensity(field) * self.power_filtered / field_power
+        normalized_field = SubIntensity(field,normalized_intensity)
+        return normalized_field
+
     def normalize_both_field_intensity(self,field):
         max_input_value = Intensity(self.input_beam).max()
         print(max_input_value)
@@ -235,21 +248,30 @@ class BeamShaper():
             self.propagated_beam_fourier = PipFFT(self.modulated_input_beam)
         else:
             pass
+
+        self.propagated_beam_fourier = self.normalize_field_by_input_power(self.propagated_beam_fourier)
+
         return self.propagated_beam_fourier
 
-    def filter_beam(self,filter_type=None,pos_x=None,pos_y=None,radius=None):
-        if filter_type == "Circular":
-            self.filtered_beam_fourier = CircAperture(Fin=self.propagated_beam_fourier,
+    def filter_beam(self,filter_type=None,pos_x=0,pos_y=0,radius=0):
+        if filter_type == "CircScreen":
+
+            self.filtered_beam_fourier = CircScreen(Fin=self.propagated_beam_fourier,
                                                       R=radius,
                                                       x_shift=pos_x,
                                                       y_shift=pos_y)
-        elif filter_type == "Gaussian":
-            self.filtered_beam_fourier = GaussAperture(Fin=self.propagated_beam_fourier,
+        elif filter_type == "Gaussscreen":
+            self.filtered_beam_fourier = GaussScreen(Fin=self.propagated_beam_fourier,
                                                       w=radius,
                                                       x_shift=pos_x,
                                                       y_shift=pos_y)
         else:
             self.filtered_beam_fourier = self.propagated_beam_fourier
+
+        self.power_filtered = np.sum(np.sum(Intensity(self.filtered_beam_fourier)))
+
+        print("Power after filter: ",self.power)
+        print("Power after filter: ",self.power_filtered)
 
         return self.filtered_beam_fourier
 
@@ -258,6 +280,9 @@ class BeamShaper():
             self.propagated_beam_image = PipFFT(self.filtered_beam_fourier)
         else:
             pass
+
+        self.propagated_beam_image = self.normalize_by_filtered_power(self.propagated_beam_image)
+
         return self.propagated_beam_image
 
     def load_config(self, file_name):

@@ -118,15 +118,12 @@ class Worker(QThread):
 
         input_field = self.beam_shaper.input_beam
         inverse_fourier_target_field = self.beam_shaper.inverse_fourier_transform(self.complex_amplitude)
-        self.logger.info("  Step 1: generation of the inverse fourier transform... ✔")
 
         inverse_fourier_target_field = self.beam_shaper.normalize_both_field_intensity(inverse_fourier_target_field)
-        self.logger.info("  Step 2: normalize the inverse fourier transform by max input field intensity value... ✔")
-
 
         self.finished_calculation_inverse_fourier_transform.emit(self.beam_shaper.x_array_in,inverse_fourier_target_field,input_field)
 
-        print("worker finished")
+
 
 
 class TargetAmplitudeParamsWidget(QWidget):
@@ -309,9 +306,9 @@ class TargetAmplitudeParamsWidget(QWidget):
             self.angle = QLineEdit()
             self.angle.setText(str(0))
             self.width = QLineEdit()
-            self.width.setText(str(5))
+            self.width.setText(str(0.2))
             self.height = QLineEdit()
-            self.height.setText(str(5))
+            self.height.setText(str(0.3))
             self.inner_layout.addRow("angle [in °]", self.angle)
             self.inner_layout.addRow("width [in mm]", self.width)
             self.inner_layout.addRow("height [in mm]", self.height)
@@ -748,6 +745,10 @@ class TargetFieldDesignWidget(QWidget):
 
     @pyqtSlot(np.ndarray, Field, Field)
     def display_inverse_fourier_transform(self, x_array_in,inverse_fourier_transform,input_field):
+
+        self.logger.info("  Step 1: generation of the inverse fourier transform... ✔")
+        self.logger.info("  Step 2: normalize the inverse fourier transform by max input field intensity value... ✔")
+
         # Create a new widget for the display
         inverse_fourier_transform_display = DisplayInverseFourierTargetField()
         inverse_fourier_transform_display.display_fourier_transform_target_field(x_array_in,inverse_fourier_transform,input_field)

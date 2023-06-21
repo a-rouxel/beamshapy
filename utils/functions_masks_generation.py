@@ -1,6 +1,6 @@
 
 import numpy as np
-
+from scipy.optimize import brentq
 def Simple2DBlazedGratingMask(GridPositionMatrix_X, GridPositionMatrix_Y, period, angles):
     assert len(angles) == 3, "Three angles required for three sections of the mask."
 
@@ -227,4 +227,34 @@ def WeightsMask(input_amplitude,target_amplitude,threshold=10**-1):
     weights[weights>1] = 1
 
     return weights
+
+def theorical_deformation_sinc(x):
+    a = np.sin(np.pi * (1 - x))
+    b = (np.pi * (1 - x))
+    theorical_amplitude_modulation = np.divide(a, b, out=np.ones_like(a), where=b != 0)
+
+    return theorical_amplitude_modulation
+
+def root_theorical_deformation_sinc(x,c):
+    return theorical_deformation_sinc(x) - c
+
+def generate_correction_tab(step,func):
+    a_values = np.linspace(0.001,0.999,step-2)
+    correction_tab = np.zeros_like(a_values)
+
+    for i,a in enumerate(a_values):
+        correction_tab[i] = brentq(func, 0, 1, args=(a,))
+
+    a_values = list(a_values)
+    a_values.insert(0,0)
+    a_values.append(1)
+    correction_tab = list(correction_tab)
+    correction_tab.insert(0,0)
+    correction_tab.append(1)
+
+    return a_values,correction_tab
+
+def correct_modulation_values(modulation_values,a_values,correction_tab):
+
+    return np.interp(modulation_values,a_values,correction_tab)
 

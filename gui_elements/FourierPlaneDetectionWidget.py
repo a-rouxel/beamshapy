@@ -6,7 +6,7 @@ from LightPipes import Field, Phase, Intensity
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget, QComboBox
 from LightPipes import mm
 from PyQt5.QtWidgets import QMessageBox
 
@@ -278,6 +278,15 @@ class PropagationEditor(QWidget):
         # Create Fourier Plane QFormLayout
         fourier_plane_layout = QFormLayout()
 
+        self.spatial_filter_type = QComboBox()
+        self.spatial_filter_type.addItems(["CircScreen","GaussScreen"])
+        self.spatial_filter_radius = QLineEdit()
+        self.spatial_filter_radius.setText("500")
+
+        fourier_plane_layout.addRow("Spatial Filter type", self.spatial_filter_type)
+        fourier_plane_layout.addRow("radius [in um]", self.spatial_filter_radius)
+
+
 
         fourier_plane_group = QGroupBox("Fourier Plane Settings")
         fourier_plane_group.setLayout(fourier_plane_layout)
@@ -304,6 +313,17 @@ class PropagationEditor(QWidget):
         # Create a layout for the current widget and add the scroll area
         layout = QVBoxLayout(self)
         layout.addWidget(scroll)
+    def get_config(self):
+        config = {
+            "Fourier Plane Settings": {
+                "Spatial Filter type": self.spatial_filter_type.currentText(),
+                "radius [in um]": float(self.spatial_filter_radius.text()),
+            },
+        }
+
+        self.config = config
+
+        return config
 
 class Worker(QThread):
     finished_modulate_input_beam = pyqtSignal(Field)
@@ -311,22 +331,27 @@ class Worker(QThread):
     finished_propagate_filter_beam = pyqtSignal(Field)
     finished_propagate_to_image_plane = pyqtSignal(Field)
 
-    def __init__(self,beam_shaper,slm_widget):
+    def __init__(self,beam_shaper,slm_widget,propagation_editor):
         super().__init__()
         self.beam_shaper = beam_shaper
         self.slm_widget = slm_widget
+        self.propagation_editor = propagation_editor
 
     def run(self):
         print("worker started")
 
         self.result_mask = self.slm_widget.result_mask
+        self.config_propagation = self.propagation_editor.get_config()
 
         modulated_input_beam = self.beam_shaper.phase_modulate_input_beam(self.result_mask)
         self.finished_modulate_input_beam.emit(modulated_input_beam)
         fourier_plane_field = self.beam_shaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
         self.finished_propagate_FFT_modulated_beam.emit(fourier_plane_field)
-        fourier_filtered_field = self.beam_shaper.filter_beam()
+
+        fourier_filtered_field = self.beam_shaper.filter_beam(filter_type = self.config_propagation["Fourier Plane Settings"]["Spatial Filter type"],
+                                                              radius=self.config_propagation["Fourier Plane Settings"]["radius [in um]"]*10**-6)
         self.finished_propagate_filter_beam.emit(fourier_filtered_field)
+
         output_field = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
         self.finished_propagate_to_image_plane.emit(output_field)
 
@@ -442,8 +467,10 @@ class FourierPlaneDetectionWidget(QWidget):
 
         if self.downsampling_checkbox.isChecked():
             self.downsample_factor = int(self.downsampling_factor_edit.text())
+        else:
+            self.downsample_factor = 1
 
-        self.worker = Worker(self.beam_shaper, self.slm_widget)
+        self.worker = Worker(self.beam_shaper, self.slm_widget,self.propagation_editor)
         self.worker.finished_modulate_input_beam.connect(self.display_modulated_input_field)
         self.worker.finished_propagate_FFT_modulated_beam.connect(self.display_fourier_plane_field)
         self.worker.finished_propagate_filter_beam.connect(self.display_fourier_filtered_field)
