@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QGroupBox, QHBoxLayout, QScrollArea, QCheckBox,
-                             QWidget, QFormLayout, QComboBox,QPushButton, QLineEdit, QFileDialog)
+                             QWidget, QFormLayout, QComboBox,QPushButton, QLineEdit, QFileDialog,QInputDialog)
 from PyQt5.QtCore import Qt,pyqtSignal, pyqtSlot
 
 import numpy as np
@@ -477,7 +477,7 @@ class SLMMaskWidget(QWidget):
 
         self.save_crop_mask_button = QPushButton("Crop and Save for SLM")
         self.save_crop_mask_button.setDisabled(True)
-        self.save_crop_mask_button.clicked.connect(self.on_crop_and_save_as_bmp)
+        self.save_crop_mask_button.clicked.connect(self.get_mask_name_and_save)
 
         # List to store references to the mask widgets
         self.masks_params_widgets = []
@@ -548,19 +548,22 @@ class SLMMaskWidget(QWidget):
 
         self.save_mask_button.setDisabled(True)
 
-    def on_crop_and_save_as_bmp(self):
+    def get_mask_name_and_save(self):
+        mask_name, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter mask name:')
+
+        if ok and mask_name:
+            self.on_crop_and_save_as_bmp(mask_name)
+
+    def on_crop_and_save_as_bmp(self,mask_name="SLM_mask"):
         # self.result_directory = initialize_directory(self.infos_editor.config)
         self.simulation_name = self.infos_editor.config['simulation name']
         self.results_directory = self.infos_editor.config['results directory']
         results_directory = os.path.join(self.results_directory, self.simulation_name)
 
         # Save the resulting mask
-        crop_and_save_as_bmp(self.result_mask, results_directory,"SLM_mask")
+        crop_and_save_as_bmp(self.result_mask, results_directory,mask_name)
 
         self.save_crop_mask_button.setDisabled(True)
-    @pyqtSlot()
-
-
 
     def evaluate_operation(self):
 

@@ -331,8 +331,6 @@ def crop_and_save_as_bmp(image, results_directory, file_name):
     # Convert back to an image
     bmp_img = Image.fromarray(new_img_array)
 
-    plt.imshow(bmp_img)
-    plt.show()
 
     os.makedirs(results_directory, exist_ok=True)
 
