@@ -693,8 +693,11 @@ class TargetFieldDesignWidget(QWidget):
 
         try :
             self.result_target_amplitude
-            if len(self.result_display_widget) > len(self.target_amplitude_params_widgets):
+            if len(self.result_display_widget) == len(self.target_amplitude_params_widgets)+1:
                 self.result_display_widget.removeTab(self.result_display_widget.count()-1)
+            if len(self.result_display_widget) == len(self.target_amplitude_params_widgets)+2:
+                self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
+                self.result_display_widget.removeTab(self.result_display_widget.count() - 1)
         except:
             self.logger.info("  Evaluate Operation : No Target Amplitude Detected ..✘")
             pass
