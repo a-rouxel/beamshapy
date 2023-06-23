@@ -140,6 +140,7 @@ class TargetAmplitudeParamsWidget(QWidget):
         self.target_amplitude_type_selector = QComboBox()
         self.target_amplitude_type_selector.addItem("None")
         self.target_amplitude_type_selector.addItem("Rectangle")
+        self.target_amplitude_type_selector.addItem("Wedge")
         self.target_amplitude_type_selector.addItem("Sinus")
         self.target_amplitude_type_selector.addItem("Cosinus")
         self.target_amplitude_type_selector.addItem("Custom h5 Amplitude")
@@ -256,6 +257,12 @@ class TargetAmplitudeParamsWidget(QWidget):
                                                                           angle = np.radians(float(self.angle.text())),
                                                                           width = float(self.width.text())*mm,
                                                                           height = float(self.height.text())*mm)
+        elif target_amplitude_type == "Wedge":
+
+            target_amplitude = self.beam_shaper.generate_target_amplitude(amplitude_type=target_amplitude_type,
+                                                  position=float(self.position.text())*mm,
+                                                  angle = np.radians(float(self.angle_wedge.text())))
+
         elif target_amplitude_type == "Sinus":
 
             target_amplitude = self.beam_shaper.generate_target_amplitude(amplitude_type=target_amplitude_type,
@@ -319,6 +326,18 @@ class TargetAmplitudeParamsWidget(QWidget):
             self.width.textChanged.connect(self.enable_generate_target_amplitude_button)
             self.height.textChanged.connect(self.enable_generate_target_amplitude_button)
             self.angle.textChanged.connect(self.enable_generate_target_amplitude_button)
+
+        elif self.target_amplitude_type_selector.currentText() == "Wedge":
+            self.position = QLineEdit()
+            self.position.setText(str(5))
+            self.angle_wedge = QLineEdit()
+            self.angle_wedge.setText(str(0))
+            self.inner_layout.addRow("position [in mm]", self.position)
+            self.inner_layout.addRow("angle [in °]", self.angle_wedge)
+
+            # Connect the textChanged signal for these parameters
+            self.position.textChanged.connect(self.enable_generate_target_amplitude_button)
+            self.angle_wedge.textChanged.connect(self.enable_generate_target_amplitude_button)
 
         elif self.target_amplitude_type_selector.currentText() == "Sinus":
             self.period = QLineEdit()

@@ -175,6 +175,16 @@ class BeamShaper():
             amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,angle, width,height)
             return amplitude
 
+        if amplitude_type == "Wedge":
+            x_proj = np.cos(angle)*position
+            y_proj = np.sin(angle)*position
+
+            amplitude_x = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_proj,self.focal_length)
+            amplitude_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
+            amplitude = amplitude_x + amplitude_y
+
+            return amplitude
+
         if amplitude_type == "Sinus":
             amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle)
             return amplitude
@@ -308,7 +318,7 @@ class BeamShaper():
                                                       R=radius,
                                                       x_shift=pos_x,
                                                       y_shift=pos_y)
-        elif filter_type == "Gaussscreen":
+        elif filter_type == "GaussScreen":
             self.filtered_beam_fourier = GaussScreen(Fin=self.propagated_beam_fourier,
                                                       w=radius,
                                                       x_shift=pos_x,
