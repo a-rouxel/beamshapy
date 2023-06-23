@@ -362,13 +362,18 @@ class PropagationEditor(QWidget):
         fourier_plane_layout = QFormLayout()
 
         self.spatial_filter_type = QComboBox()
-        self.spatial_filter_type.addItems(["CircScreen","GaussScreen"])
+        self.spatial_filter_type.addItems(["CircScreen","GaussScreen","CircAperture","GaussAperture"])
         self.spatial_filter_radius = QLineEdit()
-        self.spatial_filter_radius.setText("500")
+        self.spatial_filter_radius.setText("1")
+        self.position_x = QLineEdit()
+        self.position_x.setText("1")
+        self.position_y = QLineEdit()
+        self.position_y.setText("1")
 
         fourier_plane_layout.addRow("Spatial Filter type", self.spatial_filter_type)
         fourier_plane_layout.addRow("radius [in um]", self.spatial_filter_radius)
-
+        fourier_plane_layout.addRow("position x [in um]", self.position_x)
+        fourier_plane_layout.addRow("position y [in um]", self.position_y)
 
 
         fourier_plane_group = QGroupBox("Fourier Plane Settings")
@@ -400,7 +405,9 @@ class PropagationEditor(QWidget):
         config = {
             "Fourier Plane Settings": {
                 "Spatial Filter type": self.spatial_filter_type.currentText(),
-                "radius [in um]": float(self.spatial_filter_radius.text()),
+                "radius [in mm]": float(self.spatial_filter_radius.text()),
+                "position x [in mm]": float(self.position_x.text()),
+                "position y [in mm]": float(self.position_y.text()),
             },
         }
 
@@ -432,7 +439,9 @@ class Worker(QThread):
         self.finished_propagate_FFT_modulated_beam.emit(fourier_plane_field)
 
         fourier_filtered_field = self.beam_shaper.filter_beam(filter_type = self.config_propagation["Fourier Plane Settings"]["Spatial Filter type"],
-                                                              radius=self.config_propagation["Fourier Plane Settings"]["radius [in um]"]*10**-6)
+                                                              pos_x =self.config_propagation["Fourier Plane Settings"]["position x [in mm]"]*10**-3,
+                                                              pos_y =self.config_propagation["Fourier Plane Settings"]["position y [in mm]"]*10**-3,
+                                                              radius=self.config_propagation["Fourier Plane Settings"]["radius [in mm]"]*10**-3,)
         self.finished_propagate_filter_beam.emit(fourier_filtered_field)
 
         output_field = self.beam_shaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")

@@ -323,6 +323,20 @@ class BeamShaper():
                                                       w=radius,
                                                       x_shift=pos_x,
                                                       y_shift=pos_y)
+
+        elif filter_type == "CircAperture":
+            self.filtered_beam_fourier = CircAperture(Fin=self.propagated_beam_fourier,
+                                                        R=radius,
+                                                        x_shift=pos_x,
+                                                        y_shift=pos_y)
+
+        elif filter_type == "GaussAperture":
+            self.filtered_beam_fourier = GaussAperture(Fin=self.propagated_beam_fourier,
+                                                        w=radius,
+                                                        x_shift=pos_x,
+                                                        y_shift=pos_y)
+
+
         else:
             self.filtered_beam_fourier = self.propagated_beam_fourier
 
