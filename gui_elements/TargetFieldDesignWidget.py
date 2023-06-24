@@ -752,7 +752,7 @@ class TargetFieldDesignWidget(QWidget):
 
         # Create a new widget for the display
         result_display = DisplayWidget(self.beam_shaper)  # replace with your actual Display Widget here
-        result_display.displaytarget_amplitude(self.result_target_amplitude,self.beam_shaper.x_array_in)  # Display the result mask
+        result_display.displaytarget_amplitude(self.result_target_amplitude,self.beam_shaper.x_array_out)  # Display the result mask
         # Add the result display as a new tab to the result_display_widget and store its index
 
         self.result_tab_index = self.result_display_widget.addTab(result_display, "Resulting Amplitude")

@@ -371,9 +371,9 @@ class PropagationEditor(QWidget):
         self.position_y.setText("1")
 
         fourier_plane_layout.addRow("Spatial Filter type", self.spatial_filter_type)
-        fourier_plane_layout.addRow("radius [in um]", self.spatial_filter_radius)
-        fourier_plane_layout.addRow("position x [in um]", self.position_x)
-        fourier_plane_layout.addRow("position y [in um]", self.position_y)
+        fourier_plane_layout.addRow("radius [in mm]", self.spatial_filter_radius)
+        fourier_plane_layout.addRow("position x [in mm]", self.position_x)
+        fourier_plane_layout.addRow("position y [in mm]", self.position_y)
 
 
         fourier_plane_group = QGroupBox("Fourier Plane Settings")

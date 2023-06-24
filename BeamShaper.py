@@ -308,10 +308,14 @@ class BeamShaper():
             pass
 
         self.propagated_beam_fourier = self.normalize_field_by_input_power(self.propagated_beam_fourier)
+        self.propagated_beam_fourier._set_grid_size(self.input_grid_size*self.delta_x_out/self.delta_x_in)
 
         return self.propagated_beam_fourier
 
     def filter_beam(self,filter_type=None,pos_x=0,pos_y=0,radius=0):
+
+        pos_y *= -1
+
         if filter_type == "CircScreen":
 
             self.filtered_beam_fourier = CircScreen(Fin=self.propagated_beam_fourier,
