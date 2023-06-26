@@ -37,7 +37,7 @@ class BeamShaper():
                           n=self.input_n,
                           m=self.input_m)
         elif self.input_beam_type == "Plane":
-            F = PlaneWave(F, w=self.input_grid_size)
+            F = PlaneWave(F, w=self.input_waist*2)
         else:
             raise ValueError("Unknown field type")
 
