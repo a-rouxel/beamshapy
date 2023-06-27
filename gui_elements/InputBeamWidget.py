@@ -28,7 +28,7 @@ class InputBeamIntensityDisplay(QWidget):
 
         ax = self.figure_cam.add_subplot(111)
         imshow = ax.imshow(intensity, cmap='viridis', extent=[-x_range_mm/2, x_range_mm/2, -y_range_mm/2, y_range_mm/2])
-
+        self.figure_cam.colorbar(imshow)
         # Set labels with LaTeX font.
         ax.set_xlabel(f'Position along X [mm]', fontsize=10)
         ax.set_ylabel(f'Position along Y [mm]', fontsize=10)
@@ -62,7 +62,7 @@ class InputBeamPhaseDisplay(QWidget):
 
         ax = self.figure_cam.add_subplot(111)
         imshow = ax.imshow(phase, cmap='viridis', extent=[-x_range_mm/2, x_range_mm/2, -y_range_mm/2, y_range_mm/2])
-
+        self.figure_cam.colorbar(imshow)
         # Set labels with LaTeX font.
         ax.set_xlabel(f'Position along X [mm]', fontsize=10)
         ax.set_ylabel(f'Position along Y [mm]', fontsize=10)
