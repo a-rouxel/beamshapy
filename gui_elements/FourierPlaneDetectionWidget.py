@@ -226,9 +226,9 @@ class DisplayWidget(QWidget):
         zoomed_intensity = self.intensity[np.ix_(y_indices, x_indices)]
         self.zoomedIntensity_power_cropped = np.sum(np.sum(zoomed_intensity))
         self.zoomedIntensity_power_total = np.sum(np.sum(self.intensity))
-        self.percentage = self.zoomedIntensity_power_cropped / self.zoomedIntensity_power_total * 100
+        self.percentage = self.zoomedIntensity_power_cropped / self.beam_shaper.power * 100
         self.maskZoomLabel.setText(
-            f'POWER : Cropped: {self.zoomedIntensity_power_cropped}, Total: {self.zoomedIntensity_power_total}, Percentage: {self.percentage}')
+            f'POWER : Cropped: {self.zoomedIntensity_power_cropped}, Total: {self.beam_shaper.power}, Percentage: {self.percentage}')
     def onclick_phase(self, event):
         ix, iy = event.xdata, event.ydata
 

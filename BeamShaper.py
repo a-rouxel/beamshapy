@@ -42,6 +42,7 @@ class BeamShaper():
             raise ValueError("Unknown field type")
 
         self.input_beam = F
+        self.input_beam = self.normalize_field_by_100000(self.input_beam)
         self.power = np.sum(np.sum(Intensity(self.input_beam)))
 
         return F
@@ -277,6 +278,12 @@ class BeamShaper():
         field = SubPhase(field,phase)
 
         return field
+
+    def normalize_field_by_100000(self,field):
+        field_power = np.sum(np.sum(Intensity(field)))
+        normalized_intensity = Intensity(field) * 100000 / field_power
+        normalized_field = SubIntensity(field,normalized_intensity)
+        return normalized_field
     def normalize_field_by_input_power(self,field):
         field_power = np.sum(np.sum(Intensity(field)))
         normalized_intensity = Intensity(field) * self.power / field_power
