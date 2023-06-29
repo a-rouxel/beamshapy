@@ -195,8 +195,9 @@ class BeamShaper():
             return amplitude
 
         if amplitude_type == "Custom h5 Amplitude":
-            if amplitude_path is None:
-                raise ValueError("Please provide h5 file path for custom mask.")
+
+            if amplitude_path =='':
+                return
 
             with h5py.File(amplitude_path, 'r') as f:
                 mask = f['amplitude'][:]
