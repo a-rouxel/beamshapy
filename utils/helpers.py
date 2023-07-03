@@ -7,6 +7,7 @@ from datetime import datetime
 import math
 import h5py
 import numpy as np
+from LightPipes import um, mm
 def configure_logging(result_directory, log_directory="logs"):
     log_directory = os.path.join(result_directory, log_directory)
     os.makedirs(log_directory, exist_ok=True)
@@ -87,7 +88,6 @@ def undersample_grid(grid, target_size=40):
     return grid[::factor,::factor]
 
 
-mm = 10** -3
 
 
 def normalize(mask, min_value, max_value):
@@ -404,3 +404,8 @@ def downsample_1d(array, downsample_factor):
     downsampled = reshaped.mean(axis=1)
 
     return downsampled
+
+
+
+
+

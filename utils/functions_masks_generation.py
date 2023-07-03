@@ -258,3 +258,10 @@ def correct_modulation_values(modulation_values,a_values,correction_tab):
 
     return np.interp(modulation_values,a_values,correction_tab)
 
+
+def wrap_phase(phase):
+    return np.angle(np.exp(1j * phase))
+
+def correct(phase, correction_a_values, correction_tab):
+    return correct_modulation_values(phase, correction_a_values, correction_tab)
+
