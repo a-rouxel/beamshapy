@@ -37,11 +37,12 @@ class BeamShaper():
                           n=self.input_n,
                           m=self.input_m)
         elif self.input_beam_type == "Plane":
-            F = PlaneWave(F, w=self.input_grid_size)
+            F = PlaneWave(F, w=self.input_waist*2)
         else:
             raise ValueError("Unknown field type")
 
         self.input_beam = F
+        self.input_beam = self.normalize_field_by_100000(self.input_beam)
         self.power = np.sum(np.sum(Intensity(self.input_beam)))
 
         return F
@@ -194,8 +195,9 @@ class BeamShaper():
             return amplitude
 
         if amplitude_type == "Custom h5 Amplitude":
-            if amplitude_path is None:
-                raise ValueError("Please provide h5 file path for custom mask.")
+
+            if amplitude_path =='':
+                return
 
             with h5py.File(amplitude_path, 'r') as f:
                 mask = f['amplitude'][:]
@@ -277,6 +279,12 @@ class BeamShaper():
         field = SubPhase(field,phase)
 
         return field
+
+    def normalize_field_by_100000(self,field):
+        field_power = np.sum(np.sum(Intensity(field)))
+        normalized_intensity = Intensity(field) * 100000 / field_power
+        normalized_field = SubIntensity(field,normalized_intensity)
+        return normalized_field
     def normalize_field_by_input_power(self,field):
         field_power = np.sum(np.sum(Intensity(field)))
         normalized_intensity = Intensity(field) * self.power / field_power

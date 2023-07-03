@@ -112,6 +112,7 @@ class DisplayWidget(QWidget):
         # Plot the mask
         self.maskFigure.clear()
         self.maskAxes = self.maskFigure.add_subplot(111)
+        self.size_x = x_array.shape[0]
 
 
         x_array = x_array
@@ -192,7 +193,7 @@ class DisplayWidget(QWidget):
 
         # Convert click coordinates to array indices
         x_index = np.argmin(np.abs(self.x_array_in - ix))
-        y_index = np.argmin(np.abs(self.x_array_in - iy))
+        y_index = self.size_x -np.argmin(np.abs(self.x_array_in - iy))
 
         # Move the vertical and horizontal lines to the clicked position
         self.vline_intensity.set_xdata(ix)
@@ -201,12 +202,14 @@ class DisplayWidget(QWidget):
 
         # Update the cut along X plot
         cut_x_data = self.intensity[y_index, :]
+        print("y index",y_index)
         self.cutXLine_intensity.set_ydata(cut_x_data)
         self.cutXFigure.axes[0].set_ylim(cut_x_data.min() - np.abs(cut_x_data.min())*0.1, cut_x_data.max() +  np.abs(cut_x_data.max())*0.1)
         self.cutXCanvas_intensity.draw()
 
         # Update the cut along Y plot
         cut_y_data = self.intensity[:, x_index]
+        print("x index",x_index)
         self.cutYLine_intensity.set_ydata(cut_y_data)
         self.cutYFigure.axes[0].set_ylim(cut_y_data.min() - np.abs(cut_y_data.min())*0.1, cut_y_data.max() +  np.abs(cut_y_data.max())*0.1)
         self.cutYCanvas_intensity.draw()
@@ -223,9 +226,9 @@ class DisplayWidget(QWidget):
         zoomed_intensity = self.intensity[np.ix_(y_indices, x_indices)]
         self.zoomedIntensity_power_cropped = np.sum(np.sum(zoomed_intensity))
         self.zoomedIntensity_power_total = np.sum(np.sum(self.intensity))
-        self.percentage = self.zoomedIntensity_power_cropped / self.zoomedIntensity_power_total * 100
+        self.percentage = self.zoomedIntensity_power_cropped / self.beam_shaper.power * 100
         self.maskZoomLabel.setText(
-            f'POWER : Cropped: {self.zoomedIntensity_power_cropped}, Total: {self.zoomedIntensity_power_total}, Percentage: {self.percentage}')
+            f'POWER : Cropped: {self.zoomedIntensity_power_cropped}, Total: {self.beam_shaper.power}, Percentage: {self.percentage}')
     def onclick_phase(self, event):
         ix, iy = event.xdata, event.ydata
 
