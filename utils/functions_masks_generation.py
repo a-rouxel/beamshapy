@@ -119,6 +119,13 @@ def Simple1DGratingMask(x_array,period):
             mask[masking_array] += 1
     return mask
 
+def VortexMask(x_array,charge):
+
+    x, y = np.meshgrid(x_array, x_array)
+
+    mask = -charge * np.arctan2(y, x)
+
+    return mask
 
 def Simple1DBlazedGratingMask(x_array, period):
 
@@ -194,10 +201,10 @@ def RectangularAmplitudeMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, a
 
     return mask
 
-def SinusAmplitudeArray(GridPositionMatrix_X_in,GridPositionMatrix_Y_in,period,angle):
+def SinusAmplitudeArray(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, period, angle, phase_offset=0):
 
     GridPositionMatrix_X_in_rot = GridPositionMatrix_X_in * np.cos(angle) - GridPositionMatrix_Y_in * np.sin(angle)
-    mask = np.sin(2 * np.pi * GridPositionMatrix_X_in_rot / period)
+    mask = np.sin(2 * np.pi * GridPositionMatrix_X_in_rot / period + phase_offset)
     return mask
 
 
@@ -264,4 +271,5 @@ def wrap_phase(phase):
 
 def correct(phase, correction_a_values, correction_tab):
     return correct_modulation_values(phase, correction_a_values, correction_tab)
+
 

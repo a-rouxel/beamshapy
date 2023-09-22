@@ -22,6 +22,7 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector = QComboBox()
         self.mask_type_selector.addItem("None")
         self.mask_type_selector.addItem("Wedge")
+        self.mask_type_selector.addItem("Vortex")
         self.mask_type_selector.addItem("ϕ target field")
         self.mask_type_selector.addItem("modulation amplitude")
         # self.mask_type_selector.addItem("Grating")
@@ -142,6 +143,12 @@ class MaskParamsWidget(QWidget):
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
                                                   period=int(self.period.text()),
                                                   orientation=self.orientation.currentText())
+
+        elif mask_type =="Vortex":
+
+            mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                  charge=int(self.charge.text()))
+
         elif mask_type == "Wedge":
 
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
@@ -231,6 +238,14 @@ class MaskParamsWidget(QWidget):
             self.period.textChanged.connect(self.enable_generate_mask_button)
             self.orientation.currentIndexChanged.connect(self.enable_generate_mask_button)
 
+        if self.mask_type_selector.currentText() == "Vortex":
+            self.charge = QLineEdit()
+            self.charge.setText(str(1))
+
+            self.inner_layout.addRow("charge", self.charge)
+
+            # Connect the textChanged signal for these parameters
+            self.charge.textChanged.connect(self.enable_generate_mask_button)
 
         if self.mask_type_selector.currentText() == "Wedge":
             self.position = QLineEdit()

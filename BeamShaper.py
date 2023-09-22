@@ -83,7 +83,7 @@ class BeamShaper():
         self.correction_a_values = a_values
 
         return a_values, correction_tab
-    def generate_mask(self,mask_type, period=None,position = None, orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
+    def generate_mask(self,mask_type, period=None,position = None, charge=None,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
 
 
         if self.x_array_in is None:
@@ -95,6 +95,12 @@ class BeamShaper():
             if orientation== "Vertical":
                 mask = np.transpose(mask)
             return mask
+
+        if mask_type == "Vortex":
+            mask = VortexMask(self.x_array_in, charge)
+
+            return mask
+
         if mask_type == "Wedge":
             x_proj = np.cos(angle)*position
             y_proj = np.sin(angle)*position
@@ -168,7 +174,7 @@ class BeamShaper():
                 print("mask_type not recognized")
             return mask
 
-    def generate_target_amplitude(self,amplitude_type, period=None,position = None, scale_factor=1,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None):
+    def generate_target_amplitude(self,amplitude_type, period=None,position = None, scale_factor=1,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None,phase_offset=0):
         if self.x_array_in is None:
             raise ValueError("Please generate Input Beam first")
 
@@ -187,7 +193,7 @@ class BeamShaper():
             return amplitude
 
         if amplitude_type == "Sinus":
-            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle)
+            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle,phase_offset)
             return amplitude
 
         if amplitude_type == "Cosinus":
