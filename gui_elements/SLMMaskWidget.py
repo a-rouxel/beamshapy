@@ -22,6 +22,7 @@ class MaskParamsWidget(QWidget):
         self.mask_type_selector = QComboBox()
         self.mask_type_selector.addItem("None")
         self.mask_type_selector.addItem("Wedge")
+        self.mask_type_selector.addItem("Gaussian")
         self.mask_type_selector.addItem("Vortex")
         self.mask_type_selector.addItem("ϕ target field")
         self.mask_type_selector.addItem("modulation amplitude")
@@ -173,6 +174,16 @@ class MaskParamsWidget(QWidget):
             except:
                 return
 
+        elif mask_type == "Gaussian":
+
+            try:
+                mask = self.beam_shaper.generate_mask(mask_type=mask_type,
+                                                      sigma_x=float(self.sigma_x.text()),
+                                                      sigma_y=float(self.sigma_y.text()))
+            except:
+                return
+
+
         elif mask_type == "Rect Amplitude":
 
             mask = self.beam_shaper.generate_mask(mask_type=mask_type,
@@ -258,6 +269,19 @@ class MaskParamsWidget(QWidget):
             # Connect the textChanged signal for these parameters
             self.position.textChanged.connect(self.enable_generate_mask_button)
             self.angle_wedge.textChanged.connect(self.enable_generate_mask_button)
+
+        if self.mask_type_selector.currentText() == "Gaussian":
+            self.sigma_x = QLineEdit()
+            self.sigma_x.setText(str(500))
+            self.sigma_y = QLineEdit()
+            self.sigma_y.setText(str(500))
+
+            self.inner_layout.addRow("sigma x [in um] ", self.sigma_x)
+            self.inner_layout.addRow("sigma y [in um]", self.sigma_y)
+
+            # Connect the textChanged signal for these parameters
+            self.sigma_x.textChanged.connect(self.enable_generate_mask_button)
+            self.sigma_y.textChanged.connect(self.enable_generate_mask_button)
 
         if self.mask_type_selector.currentText() == "Rect Amplitude":
             self.angle = QLineEdit()

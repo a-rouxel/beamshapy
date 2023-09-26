@@ -83,7 +83,7 @@ class BeamShaper():
         self.correction_a_values = a_values
 
         return a_values, correction_tab
-    def generate_mask(self,mask_type, period=None,position = None, charge=None,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
+    def generate_mask(self,mask_type,period=None,position = None, charge=None,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
 
 
         if self.x_array_in is None:
@@ -94,6 +94,19 @@ class BeamShaper():
             mask = np.tile(M1, (self.nb_of_samples, 1))
             if orientation== "Vertical":
                 mask = np.transpose(mask)
+            return mask
+
+        if mask_type == "Gaussian":
+
+            sigma_x *= 10**-6
+            sigma_y *= 10**-6
+
+            if sigma_x is None or sigma_y is None:
+                raise ValueError("Please provide values for sigma_x and sigma_y for the Gaussian mask.")
+
+            x, y = np.meshgrid(self.x_array_in, self.x_array_in)
+            mask = np.exp(-((x) ** 2 / (2 * sigma_x ** 2) + (y) ** 2 / (2 * sigma_y ** 2)))
+
             return mask
 
         if mask_type == "Vortex":
