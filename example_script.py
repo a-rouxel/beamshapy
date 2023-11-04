@@ -1,5 +1,5 @@
-from beamshapy.beamshapy.BeamShaper import BeamShaper
-from utils import *
+from beamshapy.BeamShaper import BeamShaper
+from beamshapy.helpers import *
 
 
 
