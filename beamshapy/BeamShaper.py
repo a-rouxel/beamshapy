@@ -1,7 +1,8 @@
 import numpy as np
 import yaml
 from LightPipes import *
-from utils import *
+from functions_masks_generation import *
+from helpers import *
 from scipy import interpolate
 from skimage.measure import block_reduce
 class BeamShaper():
