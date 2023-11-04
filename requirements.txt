@@ -1,6 +1,0 @@
-h5py
-lightpipes
-pyqt5
-pyqtgraph
-pyyaml
-scikit-image

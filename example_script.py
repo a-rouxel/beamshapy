@@ -1,10 +1,10 @@
-from BeamShaper import BeamShaper
+from beamshapy.beamshapy.BeamShaper import BeamShaper
 from utils import *
 
 
 
-simulation_config = load_yaml_config("config/simulation.yml")
-input_beam_config = load_yaml_config("config/input_beam.yml")
+simulation_config = load_yaml_config("beamshapy/config/simulation.yml")
+input_beam_config = load_yaml_config("beamshapy/config/input_beam.yml")
 
 
 results_directory = "experiment_results"
@@ -13,7 +13,7 @@ results_directory = "experiment_results"
 
 BeamShaper = BeamShaper(simulation_config,
                         input_beam_config,
-                        initial_config_file="config/optical_system.yml")
+                        initial_config_file="beamshapy/config/optical_system.yml")
 
 # Generate System Sampling
 BeamShaper.generate_sampling(simulation_config,input_beam_config)
