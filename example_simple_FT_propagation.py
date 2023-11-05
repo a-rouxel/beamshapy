@@ -5,7 +5,7 @@ from beamshapy.helpers import *
 
 simulation_config = load_yaml_config("beamshapy/config/simulation.yml")
 input_beam_config = load_yaml_config("beamshapy/config/input_beam.yml")
-
+optical_system_config = load_yaml_config("beamshapy/config/optical_system.yml")
 
 results_directory = "experiment_results"
 
@@ -13,10 +13,10 @@ results_directory = "experiment_results"
 
 BeamShaper = BeamShaper(simulation_config,
                         input_beam_config,
-                        initial_config_file="beamshapy/config/optical_system.yml")
+                        optical_system_config)
 
 # Generate System Sampling
-BeamShaper.generate_sampling(simulation_config,input_beam_config)
+BeamShaper.generate_sampling(simulation_config,input_beam_config,optical_system_config)
 
 # Generate System Input Beam Field
 input_field = BeamShaper.generate_input_beam(input_beam_config)
@@ -28,11 +28,7 @@ mask_type = "Wedge"
 angle = 0
 position = 1.5*mm
 
-
-
-mask = BeamShaper.generate_mask(mask_type=mask_type,
-                                      angle=angle,
-                                      position=position)
+mask = BeamShaper.mask_generator.design_mask(mask_type=mask_type,angle=angle,position=position)
 
 # Modulate and propagate
 modulated_input_field = BeamShaper.phase_modulate_input_beam(mask)
