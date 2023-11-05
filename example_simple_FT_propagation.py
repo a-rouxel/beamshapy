@@ -3,9 +3,9 @@ from beamshapy.helpers import *
 
 
 
-simulation_config = load_yaml_config("beamshapy/config/simulation.yml")
-input_beam_config = load_yaml_config("beamshapy/config/input_beam.yml")
-optical_system_config = load_yaml_config("beamshapy/config/optical_system.yml")
+simulation_config = load_yaml_config("./config/simulation.yml")
+input_beam_config = load_yaml_config("./config/input_beam.yml")
+optical_system_config = load_yaml_config("./config/optical_system.yml")
 
 results_directory = "experiment_results"
 
