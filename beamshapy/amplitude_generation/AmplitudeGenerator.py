@@ -1,6 +1,7 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 import h5py
-from scipy import interpolate, block_reduce
+from scipy import interpolate
+from skimage.measure import block_reduce
 
 
 class AmplitudeGenerator():
