@@ -1,26 +1,53 @@
 import numpy as np
-import yaml
-from LightPipes import *
-from beamshapy.functions_masks_generation import *
+
+from LightPipes import CircAperture, CircScreen, GaussScreen, GaussAperture, GaussBeam
+from LightPipes import Begin,  Intensity, Phase, PlaneWave, SubIntensity, SubPhase, MultPhase
+from LightPipes import PipFFT, Power
+from LightPipes import Field,  mm, nm
+
+from beamshapy.mask_generation.MaskGenerator import MaskGenerator
+from beamshapy.amplitude_generation.AmplitudeGenerator import AmplitudeGenerator
+from beamshapy.intensity_generation.IntensityGenerator import IntensityGenerator
 from beamshapy.helpers import *
 
-from scipy import interpolate
-from skimage.measure import block_reduce
+
 class BeamShaper():
 
-    def __init__(self,simulation_config,input_beam_config,initial_config_file):
+    """Class that contains the main attributes and methods to simulate beam shaping simulations"""
+
+    def __init__(self,simulation_config,input_beam_config,optical_system_config):
+        """
+        Initialization of the main attributes : Mask Generator and Amplitude Generator.
+        We also calculate and set the spatial sampling of the system in the different planes of interest based on the simulation configuration and on the optical system configuration.
+
+        Args:
+            simulation_config (dict): simulation configuration
+            input_beam_config (dict): input beam configuration
+            optical_system_config (dict): optical system configuration
+        """
+
         self.simulation_config = simulation_config
         self.input_beam_config = input_beam_config
-        self.initial_config_file = initial_config_file
+        self.optical_system_config = optical_system_config
 
-        # Load the initial configuration file if one was provided
-        if self.initial_config_file is not None:
-            self.load_config(self.initial_config_file)
+        self.mask_generator = MaskGenerator(self)
+        self.amplitude_generator = AmplitudeGenerator(self)
+        self.intensity_generator = IntensityGenerator(self)
 
-        self.generate_sampling(simulation_config,input_beam_config)
-        self.generate_correction_tab(nb_of_samples=1000,func=root_theorical_deformation_sinc)
+        self.generate_sampling(simulation_config,input_beam_config,optical_system_config)
 
     def generate_input_beam(self,input_beam_config):
+
+        """
+        Generate the input beam field based on the input beam configuration. We use LightPipes to generate the field.
+        Note : the input beam field power (integral of Intensity) is normalized to 100000 for numerical stability purposes.
+
+        Args:
+            input_beam_config (dict): input beam configuration
+
+        Returns:
+            Fin: input beam field
+        """
 
         self.input_waist = input_beam_config["beam"]["waist"]*mm
         self.input_beam_type = input_beam_config["beam"]["type"]
@@ -33,30 +60,52 @@ class BeamShaper():
 
 
         if self.input_beam_type == "Gaussian":
+
             F = GaussBeam(F,
                           w0=self.input_waist,
                           LG=self.input_LG,
                           n=self.input_n,
                           m=self.input_m)
+
         elif self.input_beam_type == "Plane":
+
             F = PlaneWave(F, w=self.input_waist*2)
         else:
             raise ValueError("Unknown field type")
 
         self.input_beam = F
-        self.input_beam = self.normalize_field_by_100000(self.input_beam)
-        self.power = np.sum(np.sum(Intensity(self.input_beam)))
+        self.input_beam = self.normalize_field_power(self.input_beam)
+        self.input_power = np.sum(np.sum(Intensity(self.input_beam)))
 
-        return F
+        return self.input_beam
 
-    def generate_sampling(self,simulation_config,input_beam_config):
+    def generate_sampling(self,simulation_config,input_beam_config,optical_system_config):
+
+        """
+        Generate the sampling of the system in the different planes of interest based on the simulation configuration and on the optical system configuration.
+
+        Args:
+            simulation_config (dict): simulation configuration
+            input_beam_config (dict): input beam configuration
+            optical_system_config (dict): optical system configuration
+
+        Returns:
+            dict: dictionary containing the sampling of the system in the different planes of interest
+                * delta_x_in (m) : distance between spatial samples in the input plane
+                * delta_x_out (m) : distance between spatial samples in the output plane
+                * x_array_in (m) : array of spatial coordinates in the input plane
+                * x_array_out (m) : array of spatial coordinates in the output plane
+                * GridPositionMatrix_X_in (m) : Grid matrix of spatial coordinates in the Input plane
+                * GridPositionMatrix_Y_in (m) : Grid matrix of spatial coordinates in the Input plane
+                * GridPositionMatrix_X_out (m) : Grid matrix of spatial coordinates in the Fourier Plane (Fourier conjugate)
+                * GridPositionMatrix_Y_out (m) : Grid matrix of spatial coordinates in the Fourier Plane (Fourier conjugate)
+        """
 
         self.input_grid_size = simulation_config["grid size"]*mm
         self.input_grid_sampling = simulation_config["grid sampling"] *um
         self.nb_of_samples = int(self.input_grid_size//self.input_grid_sampling)
         self.input_wavelength = input_beam_config["beam"]["wavelength"]*nm
-
-        self.focal_length = self.config["focal length"]*mm
+        self.focal_length = optical_system_config["focal length"]*mm
 
         delta_x_in = self.input_grid_sampling
         delta_x_out = self.input_wavelength * self.focal_length / (self.input_grid_size)
@@ -79,202 +128,35 @@ class BeamShaper():
         self.GridPositionMatrix_X_out = GridPositionMatrix_X_out
         self.GridPositionMatrix_Y_out = GridPositionMatrix_Y_out
 
-    def generate_correction_tab(self,nb_of_samples=1000,func=root_theorical_deformation_sinc):
-        a_values, correction_tab = generate_correction_tab(nb_of_samples, func=func)
-        self.correction_tab = correction_tab
-        self.correction_a_values = a_values
+        sampling_dict = {"delta_x_in":self.delta_x_in,
+                             "delta_x_out":self.delta_x_out,
+                             "x_array_in":self.x_array_in,
+                             "x_array_out":self.x_array_out,
+                             "GridPositionMatrix_X_in":self.GridPositionMatrix_X_in,
+                             "GridPositionMatrix_Y_in":self.GridPositionMatrix_Y_in,
+                             "GridPositionMatrix_X_out":self.GridPositionMatrix_X_out,
+                             "GridPositionMatrix_Y_out":self.GridPositionMatrix_Y_out}
 
-        return a_values, correction_tab
-    def generate_mask(self,mask_type,period=None,position = None, charge=None,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
-
-
-        if self.x_array_in is None:
-            raise ValueError("Please generate Input Beam first")
-
-        if mask_type == "Grating":
-            M1 = Simple1DBlazedGratingMask(self.x_array_in, period)
-            mask = np.tile(M1, (self.nb_of_samples, 1))
-            if orientation== "Vertical":
-                mask = np.transpose(mask)
-            return mask
-
-        if mask_type == "Gaussian":
-
-            sigma_x *= 10**-6
-            sigma_y *= 10**-6
-
-            if sigma_x is None or sigma_y is None:
-                raise ValueError("Please provide values for sigma_x and sigma_y for the Gaussian mask.")
-
-            x, y = np.meshgrid(self.x_array_in, self.x_array_in)
-            mask = np.exp(-((x) ** 2 / (2 * sigma_x ** 2) + (y) ** 2 / (2 * sigma_y ** 2)))
-
-            return mask
-
-        if mask_type == "Vortex":
-            mask = VortexMask(self.x_array_in, charge)
-
-            return mask
-
-        if mask_type == "Wedge":
-            x_proj = np.cos(angle)*position
-            y_proj = np.sin(angle)*position
-
-            mask_x = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_proj,self.focal_length)
-            mask_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
-            mask = mask_x + mask_y
-
-            return mask
-
-        if mask_type == "ϕ target field":
-            target_field = self.inverse_fourier_target_field
-            mask = self.get_field_phase(target_field)
-            return mask
-
-        if mask_type == "modulation amplitude":
-            normalized_target_field = self.normalize_both_field_intensity(self.inverse_fourier_target_field)
-            target_abs_amplitude = np.sqrt(Intensity(normalized_target_field)) * amplitude_factor
-            input_abs_amplitude = np.sqrt(Intensity(self.input_beam))
-            print("input amplitude",np.max(input_abs_amplitude))
-            print("target amplitude",np.max(target_abs_amplitude))
-            mask = WeightsMask(input_abs_amplitude,target_abs_amplitude,threshold)
-            return mask
-
-
-        if mask_type == "Rect Amplitude":
-            mask = RectangularAmplitudeMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,angle, width,height)
-            return mask
-
-        if mask_type == "Phase Jump":
-            mask = PiPhaseJumpMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,orientation, position)
-            return mask
-
-        if mask_type == "Phase Reversal":
-            self.sigma_x = sigma_x
-            self.sigma_y = sigma_y
-            mask = PhaseReversalMask(self.GridPositionMatrix_X_in,self.GridPositionMatrix_Y_in,self.input_waist,sigma_x,sigma_y)
-            self.phase_inversed_Field = SubPhase(self.input_beam,mask)
-
-            return mask
-
-        if mask_type == "Weights Sinc":
-            sinc_mask_x = sinc_resized(self.GridPositionMatrix_X_in, self.input_waist*self.sigma_x)
-            sinc_mask_y = sinc_resized(self.GridPositionMatrix_Y_in, self.input_waist*self.sigma_y)
-            target_amplitude = sinc_mask_x*sinc_mask_y
-
-            input_amplitude = self.phase_inversed_Field.field.real
-
-
-            mask = WeightsMask(input_amplitude,target_amplitude,threshold)
-            return mask
-
-
-        if mask_type == "Custom h5 Mask":
-            if mask_path is None:
-                raise ValueError("Please provide h5 file path for custom mask.")
-
-            with h5py.File(mask_path, 'r') as f:
-                mask = f['mask'][:]
-
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            if mask.shape != self.GridPositionMatrix_X_in.shape:
-                new_mask = np.zeros_like(self.GridPositionMatrix_X_in)
-                x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
-                y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
-                new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
-                mask = new_mask
-
-            else:
-                print("mask_type not recognized")
-            return mask
-
-    def generate_target_amplitude(self,amplitude_type, period=None,position = None, scale_factor=1,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,amplitude_path=None,phase_offset=0):
-        if self.x_array_in is None:
-            raise ValueError("Please generate Input Beam first")
-
-        if amplitude_type == "Rectangle":
-            amplitude = RectangularAmplitudeMask(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,angle, width,height)
-            return amplitude
-
-        if amplitude_type == "Wedge":
-            x_proj = np.cos(angle)*position
-            y_proj = np.sin(angle)*position
-
-            amplitude_x = Simple2DWedgeMask(self.x_array_in,self.input_wavelength,x_proj,self.focal_length)
-            amplitude_y = np.flip(np.transpose(Simple2DWedgeMask(self.x_array_in,self.input_wavelength,y_proj,self.focal_length)),0)
-            amplitude = amplitude_x + amplitude_y
-
-            return amplitude
-
-        if amplitude_type == "Sinus":
-            amplitude = SinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle,phase_offset)
-            return amplitude
-
-        if amplitude_type == "Cosinus":
-            amplitude = CosinusAmplitudeArray(self.GridPositionMatrix_X_out,self.GridPositionMatrix_Y_out,period,angle)
-            return amplitude
-
-        if amplitude_type == "Custom h5 Amplitude":
-
-            if amplitude_path =='':
-                return
-
-            with h5py.File(amplitude_path, 'r') as f:
-                mask = f['amplitude'][:]
-
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            if mask.shape != self.GridPositionMatrix_X_in.shape:
-                new_mask = np.zeros_like(self.GridPositionMatrix_X_in)
-                x_offset = (new_mask.shape[0] - mask.shape[0]) // 2
-                y_offset = (new_mask.shape[1] - mask.shape[1]) // 2
-                new_mask[x_offset: x_offset + mask.shape[0], y_offset: y_offset + mask.shape[1]] = mask
-                mask = new_mask
-
-
-
-            # Get original shape
-            original_shape = mask.shape
-
-            if scale_factor > 1:
-                # First crop
-                crop_size = (int(original_shape[0] / scale_factor), int(original_shape[1] / scale_factor))
-                startx = original_shape[1] // 2 - (crop_size[1] // 2)
-                starty = original_shape[0] // 2 - (crop_size[0] // 2)
-                mask = mask[starty:starty + crop_size[0], startx:startx + crop_size[1]]
-
-            elif scale_factor < 1:
-
-                reduction_factor = int(1 / scale_factor)
-                mask = block_reduce(mask, block_size=(reduction_factor, reduction_factor), func=np.mean)
-                # Padding
-                pad_size_x = original_shape[1] - mask.shape[1]
-                pad_size_y = original_shape[0] - mask.shape[0]
-                mask = np.pad(mask, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
-                                     (pad_size_x // 2, pad_size_x - pad_size_x // 2)],
-                              mode='constant')
-
-            # Then interpolate to the original size
-            x = np.linspace(0, mask.shape[1], original_shape[1])
-            y = np.linspace(0, mask.shape[0], original_shape[0])
-            xx, yy = np.meshgrid(x, y)
-            newfunc = interpolate.interp2d(np.arange(mask.shape[1]), np.arange(mask.shape[0]), mask, kind='linear')
-            new_mask = newfunc(x, y)
-
-            amplitude = new_mask
-
-            return amplitude
-        else:
-            print("amplitude type not recognized")
+        return sampling_dict
 
 
     def inverse_fourier_transform(self,complex_amplitude):
+        
+        """
+        Perform the inverse Fourier transform of the complex amplitude in the Fourier Plane to obtain the field in the input beam plane.
+        Note that the phase of the complex amplitude is thresholded to avoid numerical errors. See phase_thresholder function for more details
+        Note that the inverse Fourier transform is performed with the PipFFT function of the LightPipes.
+
+        Args:
+            complex_amplitude (array): complex amplitude in the Fourier plane.
+
+        Returns:
+            Fin: inverse Fourier transform of the complex amplitude.
+        """
 
         # check if complex amplitude has same dimensions as GridPositionMatrix
         if complex_amplitude.shape != self.GridPositionMatrix_X_in.shape:
             raise ValueError("Complex amplitude must have same dimensions as GridPositionMatrix")
-
 
         self.target_field = SubIntensity(self.input_beam,np.abs(complex_amplitude)**2)
         self.target_field = SubPhase(self.target_field,np.angle(complex_amplitude))
@@ -282,66 +164,158 @@ class BeamShaper():
 
         self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
 
-        self.inverse_fourier_target_field = self.phase_filter(self.inverse_fourier_target_field)
-
+        self.inverse_fourier_target_field = self.phase_thresholder(self.inverse_fourier_target_field)
 
         return self.inverse_fourier_target_field
 
-    def get_field_phase(self,field):
-        return Phase(field)
 
-    def get_field_intensity(self,field):
-        return Intensity(field)
+    def phase_thresholder(self,field,threshold=10**-9):
 
-    def phase_filter(self,field):
+        """
+        Threshold the phase of the field to avoid numerical errors. The phase is thresholded to 0 or pi if values are close (threshold to 10^-9 by defaults)
+
+        Args:
+            field (Fin): field to threshold
+            threshold (float): threshold value (default: 10^-9)
+
+        Returns:
+            Fin: thresholded field
+
+        """
+
         phase = Phase(field)
-        phase[np.pi - np.abs(phase)<10**-9] = np.pi
-        phase[np.abs(phase)<10**-9] = 0
-        field = SubPhase(field,phase)
+        phase[np.pi - np.abs(phase)<threshold] = np.pi
+        phase[np.abs(phase)<threshold] = 0
+        thresh_field = SubPhase(field,phase)
 
-        return field
+        return thresh_field
 
-    def normalize_field_by_100000(self,field):
+    def normalize_field_power(self,field,norm_value=100000):
+
+        """
+        Normalize the field power (integral of density) to a given value (default: 100000)
+
+        Args:
+            field (Fin): field to normalize
+            norm_value (float): value to normalize the field power to (default: 100000)
+
+        Returns:
+            Fin: normalized field
+
+        """
+
         field_power = np.sum(np.sum(Intensity(field)))
-        normalized_intensity = Intensity(field) * 100000 / field_power
+        normalized_intensity = Intensity(field) * norm_value / field_power
         normalized_field = SubIntensity(field,normalized_intensity)
-        return normalized_field
-    def normalize_field_by_input_power(self,field):
-        field_power = np.sum(np.sum(Intensity(field)))
-        normalized_intensity = Intensity(field) * self.power / field_power
-        normalized_field = SubIntensity(field,normalized_intensity)
+
+
         return normalized_field
 
-    def normalize_by_filtered_power(self,field):
-        field_power = np.sum(np.sum(Intensity(field)))
-        normalized_intensity = Intensity(field) * self.power_filtered / field_power
-        normalized_field = SubIntensity(field,normalized_intensity)
-        return normalized_field
+    def normalize_field_intensity_by_max_input(self,field):
 
-    def normalize_both_field_intensity(self,field):
+        """
+        Normalize the field intensity by the maximum intensity of the input beam
+
+        Args:
+            field (Fin): field to normalize
+
+        Returns:
+            Fin: normalized field
+
+        """
         max_input_value = Intensity(self.input_beam).max()
-        print(max_input_value)
         max_target_value = Intensity(field).max()
-        print(max_target_value)
         normalized_field = SubIntensity(field,Intensity(field)*max_input_value/max_target_value)
 
         return normalized_field
+
+    def get_field_phase(self,field):
+
+        """
+        Get the phase of a given field
+
+        Args:
+            field (Fin): field to get the phase from
+
+        Returns:
+            array: phase of the field
+
+        """
+
+        return Phase(field)
+
+    def generate_target_field_from_intensity(self,target_intensity_profile):
+
+        if target_intensity_profile.shape != self.GridPositionMatrix_X_out.shape:
+            raise ValueError("Target Intensity must have same dimensions as GridPositionMatrix")
+
+        self.target_field = Field.copy(self.input_beam)
+        self.target_field = SubIntensity(self.target_field,target_intensity_profile)
+
+        target_phase = np.zeros(self.GridPositionMatrix_X_out.shape)
+        self.target_field = SubPhase(self.target_field,target_phase)
+        self.target_field = self.normalize_field_power(self.target_field)
+
+        return self.target_field
+
+
+
+
     def phase_modulate_input_beam(self,mask):
+
+        """
+        Modulate the phase of the input beam with a given phase mask
+
+        Args:
+            mask (array): phase mask to apply to the input beam
+
+        Returns:
+            Fin: modulated beam
+
+        """
+
         self.modulated_input_beam = MultPhase(self.input_beam,mask)
+
         return self.modulated_input_beam
 
     def propagate_FFT_modulated_beam(self,propagation_type="PipFFT"):
+
+        """
+        Propagate the modulated beam with the Fourier transform. We use the PipFFT function of the LightPipes library.
+
+        Args:
+            propagation_type (str): type of propagation to use (default: "PipFFT")
+
+        Returns:
+            Fin: propagated beam in the Fourier plane
+
+        """
+
         if propagation_type == "PipFFT":
             self.propagated_beam_fourier = PipFFT(self.modulated_input_beam)
         else:
             pass
 
-        self.propagated_beam_fourier = self.normalize_field_by_input_power(self.propagated_beam_fourier)
+        self.propagated_beam_fourier = self.normalize_field_power(self.propagated_beam_fourier,self.input_power)
         self.propagated_beam_fourier._set_grid_size(self.input_grid_size*self.delta_x_out/self.delta_x_in)
 
         return self.propagated_beam_fourier
 
     def filter_beam(self,filter_type=None,pos_x=0,pos_y=0,radius=0):
+
+        """
+        Filter the beam in the Fourier plane with a given filter type and parameters
+
+        Args:
+            filter_type (str): type of filter to apply (default: None)
+            pos_x (float): x position of the filter in mm  (default: 0)
+            pos_y (float): y position of the filter in mm (default: 0)
+            radius (float): radius of the filterin mm  (default: 0)
+
+        Returns:
+            Fin: filtered beam in the Fourier plane
+
+        """
 
         pos_y *= -1
 
@@ -373,24 +347,30 @@ class BeamShaper():
         else:
             self.filtered_beam_fourier = self.propagated_beam_fourier
 
-        self.power_filtered = np.sum(np.sum(Intensity(self.filtered_beam_fourier)))
+        self.input_power_filtered = np.sum(np.sum(Intensity(self.filtered_beam_fourier)))
 
-        print("Power after filter: ",self.power)
-        print("Power after filter: ",self.power_filtered)
 
         return self.filtered_beam_fourier
 
     def propagate_FFT_to_image_plane(self,propagation_type="PipFFT"):
+
+        """
+        Propagate the filtered beam to the Image Plane with the Fourier transform. We use the PipFFT function of the LightPipes library.
+
+        Args:
+            propagation_type (str): type of propagation to use (default: "PipFFT")
+
+        Returns:
+            Fin: propagated beam in the Image plane
+
+        """
+
         if propagation_type == "PipFFT":
             self.propagated_beam_image = PipFFT(self.filtered_beam_fourier)
         else:
             pass
 
-        self.propagated_beam_image = self.normalize_by_filtered_power(self.propagated_beam_image)
+        self.propagated_beam_image = self.normalize_field_power(self.propagated_beam_image,self.input_power_filtered)
+        self.propagated_beam_image._set_grid_size(self.input_grid_size)
 
         return self.propagated_beam_image
-
-    def load_config(self, file_name):
-        with open(file_name, 'r') as file:
-            self.config = yaml.safe_load(file)
-        # Call a method to update the GUI with the loaded config

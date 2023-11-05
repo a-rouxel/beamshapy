@@ -4,14 +4,31 @@ from beamshapy.intensity_generation.functions_intensity_profile import *
 
 from skimage.measure import block_reduce
 from scipy import interpolate
+import h5py
 
 class IntensityGenerator():
+    """
+    Class to design target intensity profiles
+    """
 
     def __init__(self,beam_shaper):
         self.beam_shaper = beam_shaper
 
 
     def generate_target_intensity_profile(self, profile_type,radius= None,parabola_coef = None,hyper_gauss_order = None,intensity_path=None,scale_factor=1):
+        """Main function for generating target intensity profiles
+
+        Args:
+            profile_type (str): Type of intensity profile to generate
+            radius (float): Radius of the Fresnel lens (in m)
+            parabola_coef (float): Coefficient of the parabola profile (in no units)
+            hyper_gauss_order (float): Order of the supergaussian profile
+            intensity_path (str): Path to the intensity profile H5 file
+            scale_factor (float): Scale factor of the intensity profile
+
+        Returns:
+            np.ndarray: target intensity profile
+        """
 
         if profile_type == "Fresnel Lens":
 
@@ -27,8 +44,7 @@ class IntensityGenerator():
             with h5py.File(intensity_path, 'r') as f:
                 intensity = f['intensity'][:]
 
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
-            # If the mask is too small, center it in a new array matching the GridPositionMatrix dimensions
+            # If the intensity is too small, center it in a new array matching the GridPositionMatrix dimensions
             if intensity.shape != self.beam_shaper.GridPositionMatrix_X_out.shape:
                 new_intensity = np.zeros_like(self.beam_shaper.GridPositionMatrix_X_out)
                 x_offset = (new_intensity.shape[0] - intensity.shape[0]) // 2
@@ -44,16 +60,16 @@ class IntensityGenerator():
                 crop_size = (int(original_shape[0] / scale_factor), int(original_shape[1] / scale_factor))
                 startx = original_shape[1] // 2 - (crop_size[1] // 2)
                 starty = original_shape[0] // 2 - (crop_size[0] // 2)
-                mask = mask[starty:starty + crop_size[0], startx:startx + crop_size[1]]
+                intensity = intensity[starty:starty + crop_size[0], startx:startx + crop_size[1]]
 
             elif scale_factor < 1:
 
                 reduction_factor = int(1 / scale_factor)
-                mask = block_reduce(intensity, block_size=(reduction_factor, reduction_factor), func=np.mean)
+                intensity = block_reduce(intensity, block_size=(reduction_factor, reduction_factor), func=np.mean)
                 # Padding
-                pad_size_x = original_shape[1] - mask.shape[1]
-                pad_size_y = original_shape[0] - mask.shape[0]
-                intensity = np.pad(mask, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
+                pad_size_x = original_shape[1] - intensity.shape[1]
+                pad_size_y = original_shape[0] - intensity.shape[0]
+                intensity = np.pad(intensity, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
                                      (pad_size_x // 2, pad_size_x - pad_size_x // 2)],
                               mode='constant')
 
@@ -61,7 +77,7 @@ class IntensityGenerator():
             x = np.linspace(0, intensity.shape[1], original_shape[1])
             y = np.linspace(0, intensity.shape[0], original_shape[0])
 
-            newfunc = interpolate.interp2d(np.arange(intensity.shape[1]), np.arange(intensity.shape[0]), mask, kind='linear')
+            newfunc = interpolate.interp2d(np.arange(intensity.shape[1]), np.arange(intensity.shape[0]), intensity, kind='linear')
             new_intensity = newfunc(x, y)
 
             target_intensity = new_intensity

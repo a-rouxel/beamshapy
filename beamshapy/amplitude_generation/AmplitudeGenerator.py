@@ -1,7 +1,17 @@
-from beamshapy.amplitude_generation.functions_amplitude_generation import *
 from beamshapy.spatial_profiles.functions_basic_shapes import *
+import h5py
+from scipy import interpolate, block_reduce
+
 
 class AmplitudeGenerator():
+
+    """
+    Class to design target amplitude profiles
+
+    Args:
+        beam_shaper (BeamShaper): BeamShaper object
+
+    """
 
     def __init__(self,beam_shaper):
         self.beam_shaper = beam_shaper
@@ -9,6 +19,24 @@ class AmplitudeGenerator():
     def generate_target_amplitude(self, amplitude_type, period=None, position=None, scale_factor=1,
                                   angle=None, width=None, height=None, coef=None, sigma=None, n=None,
                                   amplitude_path=None, phase_offset=0):
+        
+        """
+        Main function for generating target amplitude profiles
+
+        Args:
+            amplitude_type (str): Type of amplitude profile to generate
+            period (float): Period of the amplitude profile (in m)
+            position (float): Position of the amplitude profile (in m)
+            scale_factor (float): Scale factor of the amplitude profile
+            angle (float): Rotation angle of the amplitude profile (in rad)
+            width (float): Width of the rectange profile (in m)
+            height (float): Height of the rectange profile (in m)
+            coef (float): Coefficient of the parabola profile (in no units)
+            sigma (float): Sigma of the Gaussian profile (in m)
+            n (float): Order of the supergaussian profile
+            amplitude_path (str): Path to the amplitude profile H5 file
+            phase_offset (float): Phase offset of the sinusoidal profile (in rad)
+        """
 
         if self.beam_shaper.x_array_in is None:
             raise ValueError("Please generate Input Beam first")

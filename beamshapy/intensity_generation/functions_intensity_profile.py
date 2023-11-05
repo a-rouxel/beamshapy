@@ -2,6 +2,20 @@ from beamshapy.mask_generation.functions_masks_generation import *
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 
 def fresnel_lens(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, radius,parabola_coef,hyper_gauss_order):
+    """
+    Function to generate a Fresnel lens intensity profile
+
+    Args:
+        GridPositionMatrix_X_out (np.ndarray): X coordinates of the target grid
+        GridPositionMatrix_Y_out (np.ndarray): Y coordinates of the target grid
+        radius (float): Radius of the Fresnel lens (in m)
+        parabola_coef (float): Coefficient of the parabola profile (no units)
+        hyper_gauss_order (float): Order of the hyper-gaussian profile
+
+    Returns:
+        np.ndarray: Fresnel lens intensity profile
+    """
+
 
     parabola = ParabolaMask(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, parabola_coef)
     wrap_parabola = parabola % 1
