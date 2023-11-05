@@ -1,4 +1,3 @@
-from beamshapy.amplitude_generation.functions_amplitude_generation import *
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 from beamshapy.intensity_generation.functions_intensity_profile import *
 
