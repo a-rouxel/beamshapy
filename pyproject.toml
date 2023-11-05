@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "beamshapy"
-version = "0.1.4"
+version = "0.1.5"
 description = "a package for simulations of laser beam shaping experiments"
 authors = ["ayto <arouxel@laas.fr>"]
 license = "MIT"
