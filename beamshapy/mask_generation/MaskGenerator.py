@@ -15,13 +15,14 @@ class MaskGenerator():
         self.beam_shaper = beam_shaper
 
 
-    def generate_GSA_mask(self,input_field, target_field,
-                          tolerance=0.003, max_iterations=25,first_rmse_threshold=2,consecutive_stagnant_iterations=5):
+    def generate_GSA_mask(self,input_field, target_field, init_gsa_parabola_coef=10**7.2,
+                          tolerance=0.003, max_iterations=25,first_rmse_threshold=2,consecutive_stagnant_iterations=3):
 
         list_phase_masks,list_image_plane_intensity,list_rmse_image_plane,sim_run_time = generate_phase_mask_GSA(input_field,
                                                                                                                  target_field,
                                                                                                                  self.beam_shaper.GridPositionMatrix_X_in,
                                                                                                                  self.beam_shaper.GridPositionMatrix_Y_in,
+                                                                                                                 init_gsa_parabola_coef=init_gsa_parabola_coef,
                                                                                                                  tolerance=tolerance,
                                                                                                                  max_iterations=max_iterations,
                                                                                                                  first_rmse_threshold=first_rmse_threshold,

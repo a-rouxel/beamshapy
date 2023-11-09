@@ -25,7 +25,7 @@ input_field = beam_shaper.generate_input_beam(input_beam_config)
 # save_input_beam(results_directory, beam_shaper, input_field)
 
 # Fresnel Lens parameters
-radius = 0.5*mm
+radius = 1*mm
 parabola_coef = 10**7.2
 hyper_gauss_order = 12
 
@@ -40,9 +40,7 @@ target_field = beam_shaper.generate_target_field_from_intensity(target_intensity
 
 
 #Apply Gerchberg-Saxton Algorithm to generate the mask
-best_mask, best_intensity, dict_data = beam_shaper.mask_generator.generate_GSA_mask(input_field, target_field)
-
-
+best_mask, best_intensity, dict_data = beam_shaper.mask_generator.generate_GSA_mask(input_field, target_field,init_gsa_parabola_coef=10**6)
 
 fig, ax = plt.subplots(1,2)
 ax[0].imshow(best_mask,extent=[(beam_shaper.x_array_in/mm).min(),(beam_shaper.x_array_in/mm).max(),(beam_shaper.x_array_in/mm).min(),(beam_shaper.x_array_in/mm).max()])

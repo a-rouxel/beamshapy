@@ -1,8 +1,8 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 from beamshapy.intensity_generation.functions_intensity_profile import *
 
-from skimage.measure import block_reduce
-from scipy import interpolate
+
+from scipy import interpolate, ndimage
 import h5py
 
 class IntensityGenerator():
@@ -64,7 +64,7 @@ class IntensityGenerator():
             elif scale_factor < 1:
 
                 reduction_factor = int(1 / scale_factor)
-                intensity = block_reduce(intensity, block_size=(reduction_factor, reduction_factor), func=np.mean)
+                intensity = ndimage.zoom(intensity, zoom=(1/reduction_factor), order=0)
                 # Padding
                 pad_size_x = original_shape[1] - intensity.shape[1]
                 pad_size_y = original_shape[0] - intensity.shape[0]

@@ -2,7 +2,7 @@ from beamshapy.spatial_profiles.functions_basic_shapes import *
 from LightPipes import Field, Intensity, SubIntensity, Phase, SubPhase, PipFFT, Power, mm
 import time
 
-def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y_in,phase_type):
+def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y_in,init_gsa_parabola_coef,phase_type):
     """
     Generates the initial phase mask.
 
@@ -12,7 +12,7 @@ def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y
     """
 
     if phase_type == 'parabola':
-        init_phase = ParabolaMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, coef=10**6.5)
+        init_phase = ParabolaMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, coef=init_gsa_parabola_coef)
     else:
         print('Phase type not recognized')
 
@@ -22,13 +22,14 @@ def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y
 
 def generate_phase_mask_GSA(input_field, target_field,
                             GridPositionMatrix_X_in,GridPositionMatrix_Y_in,
+                            init_gsa_parabola_coef,
                             tolerance=0.02, max_iterations=15,
                             first_rmse_threshold=0.5,consecutive_stagnant_iterations=3):
 
 
 
     current_field = Field.copy(input_field)
-    current_field = apply_GSA_initial_phase(current_field, GridPositionMatrix_X_in,GridPositionMatrix_Y_in,phase_type='parabola')
+    current_field = apply_GSA_initial_phase(current_field, GridPositionMatrix_X_in,GridPositionMatrix_Y_in,init_gsa_parabola_coef,phase_type='parabola')
 
     t0 = time.time()
     list_rmse_image_plane = []

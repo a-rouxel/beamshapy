@@ -1,7 +1,7 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 import h5py
-from scipy import interpolate
-from skimage.measure import block_reduce
+from scipy import interpolate, ndimage
+
 
 class AmplitudeGenerator():
 
@@ -108,7 +108,7 @@ class AmplitudeGenerator():
             elif scale_factor < 1:
 
                 reduction_factor = int(1 / scale_factor)
-                mask = block_reduce(mask, block_size=(reduction_factor, reduction_factor), func=np.mean)
+                mask = ndimage.zoom(mask, zoom=(1/reduction_factor), order=0)
                 # Padding
                 pad_size_x = original_shape[1] - mask.shape[1]
                 pad_size_y = original_shape[0] - mask.shape[0]
