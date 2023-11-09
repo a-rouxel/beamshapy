@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 from PIL import Image
 
-from LightPipes import um, mm
+from LightPipes import mm
 
 def configure_logging(result_directory, log_directory="logs"):
 

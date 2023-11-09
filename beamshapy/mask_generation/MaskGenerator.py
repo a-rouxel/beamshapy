@@ -1,8 +1,8 @@
-from beamshapy.mask_generation.functions_masks_generation import *
-from beamshapy.spatial_profiles.functions_basic_shapes import *
-from beamshapy.intensity_generation.functions_Gerchberg_Saxton import *
-from beamshapy.helpers import *
-from LightPipes import *
+from beamshapy.mask_generation.functions_masks_generation import WeightsMask, root_theorical_deformation_sinc, generate_correction_tab
+from beamshapy.intensity_generation.functions_Gerchberg_Saxton import Intensity, SubPhase
+from beamshapy.intensity_generation.functions_Gerchberg_Saxton import generate_phase_mask_GSA, Simple1DBlazedGratingMask, \
+                                                                    VortexMask, Simple2DWedgeMask, RectangularMask, PiPhaseJumpMask, PhaseReversalMask
+from beamshapy.helpers import h5py, np
 
 
 class MaskGenerator():
@@ -73,8 +73,6 @@ class MaskGenerator():
         else:
             print("mask_type not recognized")
             return None
-
-        return mask
 
 
     def design_mask(self,mask_type,period=None,position = None, charge=None,orientation=None,angle = None, width = None, height = None, sigma_x=None,sigma_y=None,threshold=None,mask_path=None,amplitude_factor=1):
@@ -163,8 +161,8 @@ class MaskGenerator():
         if mask_type == "Phase Reversal":
             self.sigma_x = sigma_x
             self.sigma_y = sigma_y
-            mask = PhaseReversalMask(self.beam_shaper.GridPositionMatrix_X_in,self.beam_shaper.GridPositionMatrix_Y_in,self.input_waist,sigma_x,sigma_y)
-            self.phase_inversed_Field = SubPhase(self.input_beam,mask)
+            mask = PhaseReversalMask(self.beam_shaper.GridPositionMatrix_X_in,self.beam_shaper.GridPositionMatrix_Y_in,self.beam_shaper.input_waist,sigma_x,sigma_y)
+            self.phase_inversed_Field = SubPhase(self.beam_shaper.input_beam,mask)
 
             return mask
 

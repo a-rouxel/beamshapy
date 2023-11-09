@@ -2,13 +2,13 @@ import numpy as np
 
 from LightPipes import CircAperture, CircScreen, GaussScreen, GaussAperture, GaussBeam
 from LightPipes import Begin,  Intensity, Phase, PlaneWave, SubIntensity, SubPhase, MultPhase
-from LightPipes import PipFFT, Power
-from LightPipes import Field,  mm, nm
+from LightPipes import PipFFT
+from LightPipes import Field,  mm, nm, um
 
 from beamshapy.mask_generation.MaskGenerator import MaskGenerator
 from beamshapy.amplitude_generation.AmplitudeGenerator import AmplitudeGenerator
 from beamshapy.intensity_generation.IntensityGenerator import IntensityGenerator
-from beamshapy.helpers import *
+
 
 
 class BeamShaper():
@@ -148,7 +148,7 @@ class BeamShaper():
         Note that the inverse Fourier transform is performed with the PipFFT function of the LightPipes.
 
         Args:
-            complex_amplitude (array): complex amplitude in the Fourier plane.
+            complex_amplitude (np.ndarray): complex amplitude in the Fourier plane.
 
         Returns:
             Fin: inverse Fourier transform of the complex amplitude.

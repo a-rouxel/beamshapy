@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def ParabolaMask(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, coef):
     """
     Generates a parabolic phase mask.

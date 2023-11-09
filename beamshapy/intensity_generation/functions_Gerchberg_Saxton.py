@@ -1,7 +1,6 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 from LightPipes import Field, Intensity, SubIntensity, Phase, SubPhase, PipFFT, Power, mm
 import time
-import matplotlib.pyplot as plt
 
 def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y_in,phase_type):
     """

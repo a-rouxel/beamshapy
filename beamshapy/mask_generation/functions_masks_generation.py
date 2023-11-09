@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.optimize import brentq
 
-
 def wrap_phase(phase):
     """
     Wraps the phase between -pi and pi.

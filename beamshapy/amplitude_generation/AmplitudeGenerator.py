@@ -3,7 +3,6 @@ import h5py
 from scipy import interpolate
 from skimage.measure import block_reduce
 
-
 class AmplitudeGenerator():
 
     """
@@ -34,7 +33,7 @@ class AmplitudeGenerator():
             height (float): Height of the rectange profile (in m)
             coef (float): Coefficient of the parabola profile (in no units)
             sigma (float): Sigma of the Gaussian profile (in m)
-            n (float): Order of the supergaussian profile
+            n (int): Order of the supergaussian profile
             amplitude_path (str): Path to the amplitude profile H5 file
             phase_offset (float): Phase offset of the sinusoidal profile (in rad)
         """
@@ -113,9 +112,7 @@ class AmplitudeGenerator():
                 # Padding
                 pad_size_x = original_shape[1] - mask.shape[1]
                 pad_size_y = original_shape[0] - mask.shape[0]
-                mask = np.pad(mask, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
-                                     (pad_size_x // 2, pad_size_x - pad_size_x // 2)],
-                              mode='constant')
+                mask = np.pad(mask, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),(pad_size_x // 2, pad_size_x - pad_size_x // 2)],mode='constant')
 
             # Then interpolate to the original size
             x = np.linspace(0, mask.shape[1], original_shape[1])
