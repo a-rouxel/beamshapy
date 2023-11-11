@@ -16,8 +16,8 @@ class AmplitudeGenerator():
     def __init__(self,beam_shaper):
         self.beam_shaper = beam_shaper
 
-    def generate_target_amplitude(self, amplitude_type, period=None, position=None, scale_factor=1,
-                                  angle=None, width=None, height=None, coef=None, sigma=None, n=None,
+    def generate_target_amplitude(self, amplitude_type, period=0, position=0, scale_factor=1,
+                                  angle=0, width=0, height=0, coef=None, sigma=0, n=0,
                                   amplitude_path=None, phase_offset=0):
         
         """
