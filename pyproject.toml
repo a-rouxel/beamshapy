@@ -1,19 +1,19 @@
 [tool.poetry]
 name = "beamshapy"
-version = "0.1.8"
+version = "0.1.9"
 description = "a package for simulations of laser beam shaping experiments"
 authors = ["ayto <arouxel@laas.fr>"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^1.26.1"
-scipy = "^1.11.3"
-matplotlib = "^3.8.1"
-h5py = "^3.10.0"
-pyyaml = "^6.0.1"
-pyqt5 = "^5.15.10"
+python = "^3.8"
+numpy
+scipy
+matplotlib
+h5py
+pyyaml
+pyqt5
 
 
 [build-system]
