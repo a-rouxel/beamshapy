@@ -41,7 +41,7 @@ class MaskGenerator():
 
 
 
-    def generate_target_mask(self,mask_type,threshold=None, amplitude_factor=1):
+    def generate_target_mask(self,mask_type,threshold=0.001, amplitude_factor=1):
         """
         Generate a mask based on a Target Amplitude or Intensity.
 
@@ -59,7 +59,7 @@ class MaskGenerator():
         if self.beam_shaper.x_array_in is None:
             raise ValueError("Please generate Input Beam first")
 
-        if mask_type == "ϕ target field":
+        if mask_type == "phase target field":
             target_field = self.beam_shaper.inverse_fourier_target_field
             mask = self.beam_shaper.get_field_phase(target_field)
             return mask

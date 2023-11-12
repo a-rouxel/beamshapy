@@ -297,7 +297,6 @@ class BeamShaper():
             pass
 
         self.propagated_beam_fourier = self.normalize_field_power(self.propagated_beam_fourier,self.input_power)
-        self.propagated_beam_fourier._set_grid_size(self.input_grid_size*self.delta_x_out/self.delta_x_in)
 
         return self.propagated_beam_fourier
 
