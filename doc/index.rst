@@ -42,8 +42,10 @@ For more detailed information about each feature and further instructions, pleas
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
+   
+   getting_started
    beamshapy
+   
 
 Indices and tables
 ==================

@@ -1,6 +1,26 @@
 API Reference
 =============
 
+BeamShaper 
+-----------------
+
+.. toctree::
+   :maxdepth: 4
+
+.. automodule:: beamshapy.BeamShaper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+helpers functions
+------------------------
+
+.. automodule:: beamshapy.helpers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Subpackages
 -----------
 
@@ -12,29 +32,5 @@ Subpackages
    beamshapy.mask_generation
    beamshapy.spatial_profiles
 
-Submodules
-----------
 
-beamshapy.BeamShaper module
----------------------------
 
-.. automodule:: beamshapy.BeamShaper
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-beamshapy.helpers module
-------------------------
-
-.. automodule:: beamshapy.helpers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: beamshapy
-   :members:
-   :undoc-members:
-   :show-inheritance:
