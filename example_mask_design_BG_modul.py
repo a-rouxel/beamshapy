@@ -1,6 +1,8 @@
-from beamshapy.BeamShaper import BeamShaper, um, mm
+from beamshapy.BeamShaper import BeamShaper, Intensity,Phase, um, mm
+from beamshapy.mask_generation.functions_masks_generation import wrap_phase
 from beamshapy.helpers import *
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 
 simulation_config = load_yaml_config("./config/simulation.yml")
@@ -27,22 +29,26 @@ sinus_period = 500*um / 2
 target_amplitude = beam_shaper.amplitude_generator.generate_target_amplitude(amplitude_type="Rectangle",width=width,height=height)
 target_amplitude *= beam_shaper.amplitude_generator.generate_target_amplitude(amplitude_type="Sinus",period=sinus_period)
 
-plt.imshow(target_amplitude)
-plt.show()
+# Calculate inverse fourier transform of the target amplitude
+beam_shaper.inverse_fourier_transform(target_amplitude)
 
 # Generate SLM Mask
 mask_type = "Wedge"
 angle = 0
 position = 1.5*mm
 
-mask = BeamShaper.mask_generator.design_mask(mask_type=mask_type,angle=angle,position=position)
+wedge_mask = beam_shaper.mask_generator.design_mask(mask_type=mask_type,angle=angle,position=position)
+phase_inversion_mask = beam_shaper.mask_generator.generate_target_mask(mask_type="phase target field")
+amplitude_modulation_mask = beam_shaper.mask_generator.generate_target_mask(mask_type="modulation amplitude")
+
+resulting_mask =  wrap_phase(wedge_mask + phase_inversion_mask) * amplitude_modulation_mask
 
 # Modulate and propagate
-modulated_input_field = BeamShaper.phase_modulate_input_beam(mask)
-fourier_plane_field = BeamShaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
-fourier_filtered_field = BeamShaper.filter_beam()
-output_field = BeamShaper.propagate_FFT_to_image_plane(propagation_type="PipFFT")
+modulated_input_field = beam_shaper.phase_modulate_input_beam(resulting_mask)
+fourier_plane_field = beam_shaper.propagate_FFT_modulated_beam(propagation_type="PipFFT")
 
-# Save results
-save_generated_fields(BeamShaper, modulated_input_field, fourier_plane_field, fourier_filtered_field, output_field,
-                          results_directory)
+
+
+plt.imshow(Intensity(fourier_plane_field),norm=LogNorm())
+plt.show()
+
