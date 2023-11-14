@@ -40,7 +40,12 @@ target_field = beam_shaper.generate_target_field_from_intensity(target_intensity
 
 
 #Apply Gerchberg-Saxton Algorithm to generate the mask
-best_mask, best_intensity, dict_data = beam_shaper.mask_generator.generate_GSA_mask(input_field, target_field,init_gsa_parabola_coef=10**6)
+results_dict = beam_shaper.mask_generator.generate_GSA_mask(input_field, target_field,init_gsa_parabola_coef=10**6)
+
+# get the index of the minimum RMSE
+min_rmse_index = np.argmin(results_dict["list rmse"])
+best_mask = results_dict["list phase masks"][min_rmse_index]
+best_intensity = results_dict["list image plane intensity"][min_rmse_index]
 
 fig, ax = plt.subplots(1,2)
 ax[0].imshow(best_mask,extent=[(beam_shaper.x_array_in/mm).min(),(beam_shaper.x_array_in/mm).max(),(beam_shaper.x_array_in/mm).min(),(beam_shaper.x_array_in/mm).max()])

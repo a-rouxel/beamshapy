@@ -32,12 +32,12 @@ class MaskGenerator():
         best_mask = list_phase_masks[min_rmse_index]
         best_intensity = list_image_plane_intensity[min_rmse_index]
 
-        dict = {'list phase masks':list_phase_masks,
+        results_dict = {'list phase masks':list_phase_masks,
                 'list image plane intensity':list_image_plane_intensity,
                 'list rmse':list_rmse_image_plane,
                 'sim run time':sim_run_time}
 
-        return best_mask,best_intensity, dict
+        return results_dict
 
 
 
