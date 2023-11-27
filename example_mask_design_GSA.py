@@ -20,7 +20,7 @@ input_field = beam_shaper.generate_input_beam(input_beam_config)
 # save_input_beam(results_directory, beam_shaper, input_field)
 
 # Fresnel Lens parameters
-radius = 1*mm
+radius = 2*mm
 parabola_coef = 10**6.62
 hyper_gauss_order = 12
 
@@ -32,7 +32,7 @@ target_intensity = beam_shaper.intensity_generator.generate_target_intensity_pro
 
 
 
-conv_target_intensity = beam_shaper.intensity_generator.convolve_with_gaussian(target_intensity, sigma=10*um,kernel_size=10)
+conv_target_intensity = beam_shaper.intensity_generator.convolve_with_gaussian(target_intensity, sigma=1*um,kernel_size=10)
 
 
 plt.plot(target_intensity[target_intensity.shape[0]//2,:],label="Target Intensity")
