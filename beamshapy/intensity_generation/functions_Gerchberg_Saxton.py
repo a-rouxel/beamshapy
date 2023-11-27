@@ -1,5 +1,5 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
-from LightPipes import Field, Intensity, SubIntensity, Phase, SubPhase, PipFFT, Power, mm
+from LightPipes import Field, Intensity, SubIntensity, Phase, SubPhase, PipFFT, Power, mm, um
 import time
 
 def apply_GSA_initial_phase(field, GridPositionMatrix_X_in, GridPositionMatrix_Y_in,init_gsa_parabola_coef,phase_type):
@@ -42,6 +42,8 @@ def generate_phase_mask_GSA(input_field, target_field,
 
     gaussian_window = supergaussian2D(GridPositionMatrix_X_in[0,:], 8, 8*mm)
 
+    output_pix_surf = (GridPositionMatrix_X_in[0,1] - GridPositionMatrix_X_in[0,0]) * (GridPositionMatrix_Y_in[1,0] - GridPositionMatrix_Y_in[0,0]) / um
+
     while iter < max_iterations:
 
         list_phase_masks.append(Phase(current_field))
@@ -51,9 +53,9 @@ def generate_phase_mask_GSA(input_field, target_field,
         norm_reconstructed_intens = Intensity(current_field) * (Power(target_field) / Power(current_field))
         current_field = SubIntensity(current_field, norm_reconstructed_intens)
 
-        RMSE_image_plane = ((Intensity(target_field) - Intensity(current_field))) ** 2
+        RMSE_image_plane = ((Intensity(target_field) - Intensity(current_field))*output_pix_surf) ** 2
         RMSE_image_plane = np.sqrt(
-            np.sum(np.sum(RMSE_image_plane) * (1 / RMSE_image_plane.shape[0])) * (1 / RMSE_image_plane.shape[1]))
+            np.sum(np.sum(RMSE_image_plane)))
 
         list_rmse_image_plane.append(RMSE_image_plane)
         list_image_plane_intensity.append(Intensity(current_field))

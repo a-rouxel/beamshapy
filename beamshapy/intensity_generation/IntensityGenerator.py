@@ -1,8 +1,10 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import *
 from beamshapy.intensity_generation.functions_intensity_profile import *
-
+import numpy as np
+from scipy.ndimage import convolve
 
 from scipy import interpolate, ndimage
+import scipy.fftpack as fftpack
 import h5py
 
 class IntensityGenerator():
@@ -31,7 +33,7 @@ class IntensityGenerator():
 
         if profile_type == "Fresnel Lens":
 
-            target_intensity = fresnel_lens(self.beam_shaper.GridPositionMatrix_X_out, self.beam_shaper.GridPositionMatrix_Y_out, radius,parabola_coef,hyper_gauss_order)
+            target_intensity = fresnel_lens(self.beam_shaper.GridPositionMatrix_X_out, self.beam_shaper.GridPositionMatrix_Y_out, radius,parabola_coef)
 
             return target_intensity
 
@@ -68,9 +70,7 @@ class IntensityGenerator():
                 # Padding
                 pad_size_x = original_shape[1] - intensity.shape[1]
                 pad_size_y = original_shape[0] - intensity.shape[0]
-                intensity = np.pad(intensity, [(pad_size_y // 2, pad_size_y - pad_size_y // 2),
-                                     (pad_size_x // 2, pad_size_x - pad_size_x // 2)],
-                              mode='constant')
+                intensity = np.pad(intensity, [(pad_size_y // 2, pad_size_y - pad_size_y // 2), (pad_size_x // 2, pad_size_x - pad_size_x // 2)], mode='constant')
 
             # Then interpolate to the original size
             x = np.linspace(0, intensity.shape[1], original_shape[1])
@@ -87,5 +87,61 @@ class IntensityGenerator():
             print("intensity profile type not recognized")
             target_intensity = None
 
-        return target_intensity
+            return target_intensity
 
+    def filter_intensity(self,target_intensity,filter_radius):
+
+        # Step 1: Compute the Fourier Transform of the wrapped parabola
+        tf_target_intensity = fftpack.fft2(target_intensity)
+
+        x_array_in = self.beam_shaper.GridPositionMatrix_X_out[0,:]
+
+        gaussian_filter = supergaussian2D(x_array_in, 1, filter_radius)
+
+        # Step 3: Apply the supergaussian filter
+        filtered_ft = tf_target_intensity * gaussian_filter
+
+        # Step 4: Compute the Inverse Fourier Transform
+        filtered_intensity = fftpack.ifft2(filtered_ft)
+
+        return np.abs(filtered_intensity)
+
+    import numpy as np
+
+    def gaussian_kernel(self, kernel_size,sigma):
+        """
+        Function to generate a Gaussian kernel based on a given grid position.
+
+        Args:
+            sigma (float): Standard deviation of the Gaussian distribution.
+
+        Returns:
+            np.ndarray: Gaussian kernel.
+        """
+        ax = self.beam_shaper.GridPositionMatrix_X_out[0, :]  # Assuming uniform grid along x-axis
+        ax = ax[ax.shape[0] // 2 - kernel_size // 2: ax.shape[0] // 2 + kernel_size // 2]
+        xx, yy = np.meshgrid(ax, ax)
+
+        kernel = np.exp(-0.5 * (np.square(xx) + np.square(yy)) / np.square(sigma))
+        return kernel / np.sum(kernel)
+
+    def convolve_with_gaussian(self,target_intensity, sigma,kernel_size=10):
+        """
+        Function to convolve target intensity with a Gaussian kernel.
+
+        Args:
+            target_intensity (np.ndarray): Target intensity array.
+            sigma (float): Standard deviation of the Gaussian.
+            kernel_size (int, optional): Size of the Gaussian kernel. Defaults to 10.
+
+        Returns:
+            np.ndarray: Convolved intensity.
+        """
+        # Generate a 10x10 Gaussian kernel
+        gaussian_kernel = self.gaussian_kernel(kernel_size, sigma)
+
+
+        # Perform convolution
+        convolved_intensity = convolve(target_intensity, gaussian_kernel, mode='constant', cval=0.0)
+
+        return convolved_intensity

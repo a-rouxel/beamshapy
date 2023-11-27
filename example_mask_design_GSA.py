@@ -1,11 +1,9 @@
 from beamshapy.BeamShaper import BeamShaper
 from beamshapy.helpers import load_yaml_config, save_input_beam
 
-from LightPipes import mm, Power, Intensity
+from LightPipes import mm, um,Power, Intensity
 import matplotlib.pyplot as plt
 import numpy as np
-
-
 
 simulation_config = load_yaml_config("./config/simulation.yml")
 input_beam_config = load_yaml_config("./config/input_beam.yml")
@@ -14,10 +12,7 @@ optical_system_config = load_yaml_config("./config/optical_system.yml")
 results_directory = "experiment_results"
 
 
-beam_shaper = BeamShaper(simulation_config,
-                        input_beam_config,
-                        optical_system_config)
-
+beam_shaper = BeamShaper(simulation_config,input_beam_config, optical_system_config)
 
 # Generate System Input Beam Field
 input_field = beam_shaper.generate_input_beam(input_beam_config)
@@ -26,7 +21,7 @@ input_field = beam_shaper.generate_input_beam(input_beam_config)
 
 # Fresnel Lens parameters
 radius = 1*mm
-parabola_coef = 10**7.2
+parabola_coef = 10**6.62
 hyper_gauss_order = 12
 
 # Generate Target Intensity Profile
@@ -35,8 +30,18 @@ target_intensity = beam_shaper.intensity_generator.generate_target_intensity_pro
                                                                                      parabola_coef = parabola_coef,
                                                                                      hyper_gauss_order = hyper_gauss_order)
 
+
+
+conv_target_intensity = beam_shaper.intensity_generator.convolve_with_gaussian(target_intensity, sigma=10*um,kernel_size=10)
+
+
+plt.plot(target_intensity[target_intensity.shape[0]//2,:],label="Target Intensity")
+plt.plot(conv_target_intensity[conv_target_intensity.shape[0]//2,:],label="Convolved Target Intensity")
+plt.legend()
+plt.show()
+
 # Generate Target Field from the given Target Intensity Profile
-target_field = beam_shaper.generate_target_field_from_intensity(target_intensity)
+target_field = beam_shaper.generate_target_field_from_intensity(conv_target_intensity)
 
 
 #Apply Gerchberg-Saxton Algorithm to generate the mask

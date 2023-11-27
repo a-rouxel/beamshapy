@@ -1,6 +1,7 @@
 from beamshapy.spatial_profiles.functions_basic_shapes import ParabolaMask, supergaussian2D
+import matplotlib.pyplot as plt
 
-def fresnel_lens(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, radius, parabola_coef,hyper_gauss_order):
+def fresnel_lens(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, radius, parabola_coef):
     """
     Function to generate a Fresnel lens intensity profile
 
@@ -18,6 +19,7 @@ def fresnel_lens(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, radius, par
     parabola = ParabolaMask(GridPositionMatrix_X_out, GridPositionMatrix_Y_out, parabola_coef)
     wrap_parabola = parabola % 1
 
-    x_array_out = GridPositionMatrix_X_out[0,:]
+    wrap_parabola[GridPositionMatrix_X_out**2 + GridPositionMatrix_Y_out**2 > radius**2] = 0
 
-    return wrap_parabola * supergaussian2D(x_array_out, hyper_gauss_order, radius)
+    return wrap_parabola
+
