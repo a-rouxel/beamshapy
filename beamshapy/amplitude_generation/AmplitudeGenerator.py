@@ -43,7 +43,7 @@ class AmplitudeGenerator():
 
         if amplitude_type == "Rectangle":
             amplitude = RectangularMask(self.beam_shaper.GridPositionMatrix_X_out, self.beam_shaper.GridPositionMatrix_Y_out, angle,
-                                                 width, height)
+                                                 width, height,position=position)
             return amplitude
 
         if amplitude_type == "Gaussian":

@@ -75,10 +75,9 @@ def PhaseReversalMask(GridPositionMatrix_X_in,GridPositionMatrix_Y_in,input_wais
 
     return M
 
-def RectangularMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, angle, width, height):
-
+def RectangularMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, angle, width, height, position=(0, 0)):
     """
-    Generates a rectangular amplitude mask.
+    Generates a rectangular amplitude mask with an optional position.
 
     Args:
         GridPositionMatrix_X_in (np.ndarray): 2D array with the x coordinates of the grid (in m).
@@ -86,18 +85,28 @@ def RectangularMask(GridPositionMatrix_X_in, GridPositionMatrix_Y_in, angle, wid
         angle (float): Rotation angle of the rectangle (in rad).
         width (float): Width of the rectangle (in m).
         height (float): Height of the rectangle (in m).
+        position (tuple): Center position of the rectangle (in m).
 
     Returns:
         np.ndarray: 2D array with the mask.
-
     """
 
-    mask = np.zeros(GridPositionMatrix_X_in.shape)
-    # rotate the grid
-    GridPositionMatrix_X_in_rot = GridPositionMatrix_X_in * np.cos(angle) - GridPositionMatrix_Y_in * np.sin(angle)
-    GridPositionMatrix_Y_in_rot = GridPositionMatrix_Y_in * np.cos(angle) + GridPositionMatrix_X_in * np.sin(angle)
+    # Unpack the position tuple
+    x0, y0 = position
 
-    mask[(np.abs(GridPositionMatrix_X_in_rot) < width/2) & (np.abs(GridPositionMatrix_Y_in_rot) < height/2)] = 1
+    # Shift the grid coordinates by the position
+    shifted_X = GridPositionMatrix_X_in - x0
+    shifted_Y = GridPositionMatrix_Y_in - y0
+
+    # Rotate the grid
+    rotated_X = shifted_X * np.cos(angle) - shifted_Y * np.sin(angle)
+    rotated_Y = shifted_Y * np.cos(angle) + shifted_X * np.sin(angle)
+
+    # Initialize the mask
+    mask = np.zeros(GridPositionMatrix_X_in.shape)
+
+    # Apply the mask
+    mask[(np.abs(rotated_X) < width / 2) & (np.abs(rotated_Y) < height / 2)] = 1
 
     return mask
 

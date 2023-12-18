@@ -1,5 +1,5 @@
 import numpy as np
-
+import time
 from LightPipes import CircAperture, CircScreen, GaussScreen, GaussAperture, GaussBeam
 from LightPipes import Begin,  Intensity, Phase, PlaneWave, SubIntensity, SubPhase, MultPhase
 from LightPipes import PipFFT
@@ -9,7 +9,8 @@ from beamshapy.mask_generation.MaskGenerator import MaskGenerator
 from beamshapy.amplitude_generation.AmplitudeGenerator import AmplitudeGenerator
 from beamshapy.intensity_generation.IntensityGenerator import IntensityGenerator
 
-
+import jax.numpy as jnp
+from jax import jit
 
 class BeamShaper():
 
@@ -140,7 +141,7 @@ class BeamShaper():
         return sampling_dict
 
 
-    def inverse_fourier_transform(self,complex_amplitude):
+    def inverse_fourier_transform(self,complex_amplitude,inverse_fourier_type="PipFFT"):
         
         """
         Perform the inverse Fourier transform of the complex amplitude in the Fourier Plane to obtain the field in the input beam plane.
@@ -161,8 +162,17 @@ class BeamShaper():
         self.target_field = SubIntensity(self.input_beam,np.abs(complex_amplitude)**2)
         self.target_field = SubPhase(self.target_field,np.angle(complex_amplitude))
 
+        if inverse_fourier_type == "PipFFT":
+            self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
+        elif inverse_fourier_type == "JaxFFT":
+            Fout = Field.copy(self.target_field)
+            field = Fout.field
+            field = jnp.array(field)  # Convert input to JAX array
+            field_out = IJaxFFT(field )
+            Fout.field = field_out
+            self.inverse_fourier_target_field = Fout
 
-        self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
+            return None
 
         self.inverse_fourier_target_field = self.phase_thresholder(self.inverse_fourier_target_field)
 
@@ -278,6 +288,8 @@ class BeamShaper():
 
         return self.modulated_input_beam
 
+
+
     def propagate_FFT_modulated_beam(self,propagation_type="PipFFT"):
 
         """
@@ -293,6 +305,13 @@ class BeamShaper():
 
         if propagation_type == "PipFFT":
             self.propagated_beam_fourier = PipFFT(self.modulated_input_beam)
+        elif propagation_type == "JaxFFT":
+            Fout = Field.copy(self.modulated_input_beam)
+            field = Fout.field
+            field = jnp.array(field)  # Convert input to JAX array
+            field_out = JaxFFT(field)
+            Fout.field = field_out
+            self.propagated_beam_fourier = Fout
         else:
             pass
 
@@ -373,3 +392,16 @@ class BeamShaper():
         self.propagated_beam_image._set_grid_size(self.input_grid_size)
 
         return self.propagated_beam_image
+
+
+@jit
+def JaxFFT(field):
+
+        field_out = jnp.fft.fftshift(jnp.fft.fft2(jnp.fft.ifftshift(field)))
+
+        return field_out
+@jit
+def IJaxFFT(field):
+        field_out = jnp.fft.fftshift(jnp.fft.ifft2(jnp.fft.ifftshift(field)))
+
+        return field_out
