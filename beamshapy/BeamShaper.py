@@ -9,8 +9,6 @@ from beamshapy.mask_generation.MaskGenerator import MaskGenerator
 from beamshapy.amplitude_generation.AmplitudeGenerator import AmplitudeGenerator
 from beamshapy.intensity_generation.IntensityGenerator import IntensityGenerator
 
-import jax.numpy as jnp
-from jax import jit
 
 class BeamShaper():
 
@@ -32,6 +30,8 @@ class BeamShaper():
         self.optical_system_config = optical_system_config
 
         self.mask_generator = MaskGenerator(self)
+        self.mask_generator.generate_correction_tab()
+
         self.amplitude_generator = AmplitudeGenerator(self)
         self.intensity_generator = IntensityGenerator(self)
 
@@ -164,14 +164,6 @@ class BeamShaper():
 
         if inverse_fourier_type == "PipFFT":
             self.inverse_fourier_target_field = PipFFT(self.target_field , -1)
-        elif inverse_fourier_type == "JaxFFT":
-            Fout = Field.copy(self.target_field)
-            field = Fout.field
-            field = jnp.array(field)  # Convert input to JAX array
-            field_out = IJaxFFT(field )
-            Fout.field = field_out
-            self.inverse_fourier_target_field = Fout
-
             return None
 
         self.inverse_fourier_target_field = self.phase_thresholder(self.inverse_fourier_target_field)
@@ -305,13 +297,6 @@ class BeamShaper():
 
         if propagation_type == "PipFFT":
             self.propagated_beam_fourier = PipFFT(self.modulated_input_beam)
-        elif propagation_type == "JaxFFT":
-            Fout = Field.copy(self.modulated_input_beam)
-            field = Fout.field
-            field = jnp.array(field)  # Convert input to JAX array
-            field_out = JaxFFT(field)
-            Fout.field = field_out
-            self.propagated_beam_fourier = Fout
         else:
             pass
 
@@ -392,16 +377,3 @@ class BeamShaper():
         self.propagated_beam_image._set_grid_size(self.input_grid_size)
 
         return self.propagated_beam_image
-
-
-@jit
-def JaxFFT(field):
-
-        field_out = jnp.fft.fftshift(jnp.fft.fft2(jnp.fft.ifftshift(field)))
-
-        return field_out
-@jit
-def IJaxFFT(field):
-        field_out = jnp.fft.fftshift(jnp.fft.ifft2(jnp.fft.ifftshift(field)))
-
-        return field_out

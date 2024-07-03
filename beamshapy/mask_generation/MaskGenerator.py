@@ -1,4 +1,4 @@
-from beamshapy.mask_generation.functions_masks_generation import WeightsMask, root_theorical_deformation_sinc, generate_correction_tab
+from beamshapy.mask_generation.functions_masks_generation import WeightsMask, root_theorical_deformation_sinc, generate_correction_tab, correct_modulation_values
 from beamshapy.intensity_generation.functions_Gerchberg_Saxton import Intensity, SubPhase
 from beamshapy.intensity_generation.functions_Gerchberg_Saxton import generate_phase_mask_GSA, Simple1DBlazedGratingMask, \
                                                                     VortexMask, Simple2DWedgeMask, RectangularMask, PiPhaseJumpMask, PhaseReversalMask
@@ -69,7 +69,10 @@ class MaskGenerator():
             target_abs_amplitude = np.sqrt(Intensity(normalized_target_field)) * amplitude_factor
             input_abs_amplitude = np.sqrt(Intensity(self.beam_shaper.input_beam))
             mask = WeightsMask(input_abs_amplitude,target_abs_amplitude,threshold)
-            return mask
+
+            corrected_mask = correct_modulation_values(mask, self.correction_a_values, self.correction_tab)
+
+            return corrected_mask
 
         else:
             print("mask_type not recognized")
